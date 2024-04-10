@@ -1,0 +1,16 @@
+[package]
+name = "rusty_mos"
+version = "0.1.0"
+edition = "2021"
+authors = ["kai_Ker <22373080@buaa.edu.cn>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

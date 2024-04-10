@@ -1,0 +1,11 @@
+{
+    "rust-analyzer.check.targets": "mipsel-unknown-none",
+    "rust-analyzer.check.command": "clippy",
+    "rust-analyzer.check.extraArgs": [
+        "-Zbuild-std=core,alloc"
+    ],
+    "rust-analyzer.check.allTargets": false,
+    "rust-analyzer.linkedProjects": [
+        "./Cargo.toml"
+    ]
+}
