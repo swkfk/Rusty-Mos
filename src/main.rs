@@ -4,7 +4,7 @@
 
 use core::{arch::global_asm, include_str, panic::PanicInfo};
 
-use rusty_mos::println;
+use rusty_mos::{kern::machine::halt, println};
 
 global_asm!(include_str!("start.S"));
 
@@ -21,5 +21,5 @@ pub extern "C" fn rust_mips_main() {
     println!("Simple string format: {}", "Compiler will done it!");
     println!("Simple integar format: {}", 123);
     println!();
-    panic!();
+    halt();
 }
