@@ -2,11 +2,9 @@
 #![no_std]
 #![no_main]
 
-pub mod kern;
-
 use core::{arch::global_asm, include_str, panic::PanicInfo};
 
-use kern::machine::print_charc;
+use rusty_mos::println;
 
 global_asm!(include_str!("start.S"));
 
@@ -17,6 +15,11 @@ fn panic(_info: &PanicInfo) -> ! {
 
 #[no_mangle]
 pub extern "C" fn rust_mips_main() {
-    print_charc(b'H');
+    println!("Rusty Mos, By kai_Ker");
+    println!("Transplanted From the C-Edition Mos of BUAA OS Course");
+    println!("> main.rs: rust_mips_main() has been called");
+    println!("Simple string format: {}", "Compiler will done it!");
+    println!("Simple integar format: {}", 123);
+    println!();
     panic!();
 }
