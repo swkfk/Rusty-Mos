@@ -14,10 +14,16 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[no_mangle]
-pub extern "C" fn rust_mips_main() {
+pub extern "C" fn rust_mips_main(
+    _argc: u32,
+    _argv: *const *const u8,
+    _penv: *const *const u8,
+    ram_low_size: u32,
+) {
+    println!("> main.rs: rust_mips_main() has been called");
+    println!("> main.rs: the arg ram_low_size is {}", ram_low_size);
     println!("Rusty Mos, By kai_Ker");
     println!("Transplanted From the C-Edition Mos of BUAA OS Course");
-    println!("> main.rs: rust_mips_main() has been called");
     println!("Simple string format: {}", "Compiler will done it!");
     println!("Simple integar format: {}", 123);
     println!();
