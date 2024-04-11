@@ -22,4 +22,4 @@ clear_bss_done:
 	# set up the kernel stack
 	la		$sp, 0x80400000  # TODO: KSTACKTOP, to include instead of writing it directly
 	# jump to rust_mips_main */
-	j		rust_mips_main
+	j		rust_mips_init
