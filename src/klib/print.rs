@@ -30,3 +30,29 @@ macro_rules! println {
         $crate::print!("\n")
     };
 }
+
+#[macro_export]
+macro_rules! printnumln {
+    ($fmt:expr $(, $arg:expr)*) => {
+        printnumln!($fmt $(, $arg)*; 10);
+    };
+    ($fmt:expr $(, $arg:expr)* ; $index: expr) => {
+        $crate::print!($fmt);
+        $(
+            $crate::print!(" ");
+            match $index {
+                2 => $crate::print!("0b"),
+                8 => $crate::print!("0o"),
+                10 => (),
+                16 => $crate::print!("0X"),
+                _ => {
+                    $crate::print!("(Base: ");
+                    $crate::kern::machine::_write_integar($index, 10);
+                    $crate::print!(")");
+                },
+            };
+            $crate::kern::machine::_write_integar($arg, $index);
+        )*
+        $crate::print!("\n");
+    };
+}
