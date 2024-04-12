@@ -4,7 +4,11 @@
 
 use core::{arch::global_asm, include_str, panic::PanicInfo};
 
-use rusty_mos::{kern::machine::halt, println, printnumln};
+use rusty_mos::{
+    kern::machine::halt,
+    ktests::test_print::{test_println, test_printnum},
+    println, printnumln,
+};
 
 global_asm!(include_str!("start.S"));
 
@@ -24,18 +28,10 @@ pub extern "C" fn rust_mips_init(
     printnumln!("> main.rs: the arg ram_low_size is", ram_low_size as i32);
     println!("Rusty Mos, By kai_Ker");
     println!("Transplanted From the C-Edition Mos of BUAA OS Course");
-    println!("Simple string format: {}", "Compiler will done it!");
-    println!("Simple integer format: {}", 123);
     println!();
-    printnumln!("With no integer");
-    printnumln!("With an integer:", 1024);
-    printnumln!("With an integer:", 1029; 16);
-    printnumln!("With an integer:", 1029; 8);
-    printnumln!("With an integer:", 1029; 2);
-    printnumln!("With an integer:", 1029; 7);
-    printnumln!("With a zero:", 0);
-    printnumln!("With a negetive:", -123);
-    printnumln!("With a lot of numbers:", 123, 321, 666; 16);
-    println!();
+
+    test_println();
+    test_printnum();
+
     halt();
 }
