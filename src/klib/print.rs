@@ -54,12 +54,12 @@ macro_rules! println {
 }
 
 #[macro_export]
-macro_rules! printnumln {
+macro_rules! printnum {
     ($fmt:expr $(, $arg:expr)*) => {
-        printnumln!($fmt $(, $arg)*; 10);
+        printnum!($fmt $(, $arg)*; 10);
     };
     ($fmt:expr $(, $arg:expr)* ; $index: expr) => {
-        $crate::print!($fmt);
+        $crate::klib::print::_write_str($fmt);
         $(
             $crate::print!(" ");
             match $index {
@@ -75,6 +75,17 @@ macro_rules! printnumln {
             };
             $crate::klib::print::_write_integar($arg, $index);
         )*
+    };
+}
+
+#[macro_export]
+macro_rules! printnumln {
+    ($fmt:expr $(, $arg:expr)*) => {
+        $crate::printnum!($fmt $(, $arg)*; 10);
         $crate::print!("\n");
     };
+    ($fmt:expr $(, $arg:expr)* ; $index: expr) => {
+        $crate::printnum!($fmt $(, $arg)*; $index);
+        $crate::print!("\n");
+    }
 }
