@@ -7,14 +7,22 @@ use core::{arch::global_asm, include_str, panic::PanicInfo};
 use rusty_mos::{
     kern::machine::halt,
     ktests::test_print::{test_println, test_printnum},
-    println, printnumln,
+    print, println, printnum, printnumln,
 };
 
 global_asm!(include_str!("start.S"));
 
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
+fn panic(info: &PanicInfo) -> ! {
+    print!("Kernel Panic!");
+    if let Some(location) = info.location() {
+        print!(" At ");
+        printnum!(location.file());
+        printnumln!(" :", location.line() as i32);
+    } else {
+        println!();
+    }
+    halt();
 }
 
 #[no_mangle]
@@ -26,6 +34,7 @@ pub extern "C" fn rust_mips_init(
 ) {
     println!("> main.rs: rust_mips_init() has been called");
     printnumln!("> main.rs: the arg ram_low_size is", ram_low_size as i32);
+
     println!("Rusty Mos, By kai_Ker");
     println!("Transplanted From the C-Edition Mos of BUAA OS Course");
     println!();
