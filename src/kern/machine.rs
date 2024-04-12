@@ -26,25 +26,3 @@ pub fn halt() -> ! {
     println!("> machine.rs: halt is not supported in this machine!\n");
     panic!();
 }
-
-pub fn _write_str(s: &str) {
-    for c in s.chars() {
-        print_charc(c as u8);
-    }
-}
-
-pub fn _write_integar(mut s: i32, index: u8) {
-    if s == 0 {
-        print_charc(b'0');
-        return;
-    }
-    if s < 0 {
-        print_charc(b'-');
-        s = -s;
-    }
-    if s >= index as i32 {
-        _write_integar(s / index as i32, index);
-    }
-    let tail = s % index as i32;
-    print_charc(tail as u8 + (if tail <= 9 { b'0' } else { b'A' - 10 }));
-}
