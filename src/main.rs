@@ -4,7 +4,14 @@
 
 use core::{arch::global_asm, include_str, panic::PanicInfo};
 
-use rusty_mos::{debugln, kern::machine::halt, print, println};
+use rusty_mos::{
+    debugln,
+    kern::{
+        machine::halt,
+        pmap::{mips_detect_memory, mips_vm_init},
+    },
+    print, println,
+};
 
 global_asm!(include_str!("start.S"));
 
@@ -29,6 +36,9 @@ pub extern "C" fn rust_mips_init(
 
     println!("Ram low size={}", ram_low_size);
     println!();
+
+    mips_detect_memory(ram_low_size);
+    mips_vm_init();
 
     halt();
 }
