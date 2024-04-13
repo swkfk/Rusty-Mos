@@ -66,7 +66,7 @@ macro_rules! printnum {
                 2 => $crate::print!("0b"),
                 8 => $crate::print!("0o"),
                 10 => (),
-                16 => $crate::print!("0X"),
+                16 => $crate::print!("0x"),
                 _ => {
                     $crate::print!("(Base: ");
                     $crate::klib::print::_write_integar($index, 10);
@@ -88,4 +88,39 @@ macro_rules! printnumln {
         $crate::printnum!($fmt $(, $arg)*; $index);
         $crate::print!("\n");
     }
+}
+
+#[cfg(debug_assertions)]
+#[macro_export]
+macro_rules! debugln {
+    () => {$crate::print!("\n")};
+    ($($arg:tt)*) => {
+        $crate::print!("\x1b[35m");
+        $crate::print!($($arg)*);
+        $crate::print!("\x1b[0m");
+        $crate::print!("\n")
+    };
+}
+
+#[cfg(not(debug_assertions))]
+#[macro_export]
+macro_rules! debugln {
+    () => {};
+    ($($arg:tt)*) => {};
+}
+
+#[cfg(debug_assertions)]
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)*) => {
+        $crate::print!("\x1b[35m");
+        $crate::print!($($arg)*);
+        $crate::print!("\x1b[0m");
+    };
+}
+
+#[cfg(not(debug_assertions))]
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)*) => {};
 }
