@@ -24,5 +24,5 @@ pub fn print_charc(ch: u8) {
 pub fn halt() -> ! {
     unsafe { core::ptr::write_volatile((KSEG1 + MALTA_FPGA_BASE + 0x500) as *mut u8, 0x42) };
     println!("> machine.rs: halt is not supported in this machine!\n");
-    panic!();
+    unreachable!();
 }

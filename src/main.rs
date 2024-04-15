@@ -10,15 +10,15 @@ use rusty_mos::{
         machine::halt,
         pmap::{mips_detect_memory, mips_vm_init, Page},
     },
-    print, println,
+    println,
 };
 
 global_asm!(include_str!("start.S"));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    print!("Kernel Panic!");
-    println!("{}", info);
+    println!("\x1b[31mKernel Panic!");
+    println!("{}\x1b[0m", info);
     halt();
 }
 
