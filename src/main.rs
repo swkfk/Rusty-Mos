@@ -2,13 +2,13 @@
 #![no_std]
 #![no_main]
 
-use core::{arch::global_asm, include_str, panic::PanicInfo};
+use core::{arch::global_asm, include_str, panic::PanicInfo, ptr};
 
 use rusty_mos::{
     debugln,
     kern::{
         machine::halt,
-        pmap::{mips_detect_memory, mips_vm_init},
+        pmap::{mips_detect_memory, mips_vm_init, Page},
     },
     print, println,
 };
@@ -37,8 +37,13 @@ pub extern "C" fn rust_mips_init(
     println!("Ram low size={}", ram_low_size);
     println!();
 
-    mips_detect_memory(ram_low_size);
-    mips_vm_init();
+    let mut npage: usize = 0;
+    let memsize = ram_low_size as usize;
+    let mut freemem: usize = 0;
+    let mut pages: *mut Page = ptr::null_mut();
+
+    mips_detect_memory(&mut npage, memsize);
+    mips_vm_init(&mut pages, &mut freemem, npage, memsize);
 
     halt();
 }
