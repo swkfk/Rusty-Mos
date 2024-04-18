@@ -8,7 +8,7 @@ use rusty_mos::{
     debugln,
     kern::{
         machine::halt,
-        pmap::{mips_detect_memory, mips_vm_init, Page},
+        pmap::{mips_detect_memory, mips_vm_init, page_init, PageList, PageNode},
     },
     println,
 };
@@ -40,10 +40,12 @@ pub extern "C" fn rust_mips_init(
     let mut npage: usize = 0;
     let memsize = ram_low_size as usize;
     let mut freemem: usize = 0;
-    let mut pages: *mut Page = ptr::null_mut();
+    let mut pages: *mut PageNode = ptr::null_mut();
 
     mips_detect_memory(&mut npage, memsize);
     mips_vm_init(&mut pages, &mut freemem, npage, memsize);
+
+    let _page_free_list = page_init(&mut pages, &mut freemem, npage);
 
     halt();
 }

@@ -8,7 +8,7 @@ pub struct LinkList<T: Copy> {
 pub struct LinkNode<T: Copy> {
     next: *mut LinkNode<T>,
     prev: *mut *mut LinkNode<T>,
-    data: *mut T,
+    pub data: T,
 }
 
 impl<T: Copy> Default for LinkList<T> {
@@ -60,7 +60,7 @@ impl<T: Copy> LinkList<T> {
 }
 
 impl<T: Copy> LinkNode<T> {
-    pub const fn new(data: *mut T) -> LinkNode<T> {
+    pub const fn new(data: T) -> LinkNode<T> {
         LinkNode {
             prev: ptr::null_mut(),
             next: ptr::null_mut(),
