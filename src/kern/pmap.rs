@@ -3,7 +3,7 @@ use core::{mem::size_of, ptr};
 use crate::{
     debugln,
     kdef::{
-        error::Error,
+        error::KError,
         mmu::{PTE_C_CACHEABLE, PTE_V},
         queue::{LinkList, LinkNode},
     },
@@ -99,9 +99,9 @@ pub fn page_alloc(
     page_free_list: &mut PageList,
     pages: &*mut PageNode,
     // npage: usize,
-) -> Result<*mut PageNode, Error> {
+) -> Result<*mut PageNode, KError> {
     match unsafe { page_free_list.pop_head() } {
-        None => Err(Error::NoMem),
+        None => Err(KError::NoMem),
         Some(pp) => unsafe {
             ptr::write_bytes(page2kva!(pp, *pages; PageNode) as *mut u8, 0, PAGE_SIZE);
             Ok(pp)
@@ -128,7 +128,7 @@ pub fn pgdir_walk(
     create: bool,
     page_free_list: &mut PageList,
     pages: &*mut PageNode,
-) -> Result<*mut Pte, Error> {
+) -> Result<*mut Pte, KError> {
     let pgdir_entryp = (pgdir as u32 + (PDX!(va) * size_of::<Pde>()) as u32) as *mut Pte;
     if 0 == PTE_V & unsafe { *(pgdir_entryp as *const Pte) } {
         // Not Valid!
