@@ -1,13 +1,13 @@
 use core::ptr;
 
 pub struct LinkList<T: Copy> {
-    head: *mut LinkNode<T>,
+    pub head: *mut LinkNode<T>,
 }
 
 #[derive(Clone, Copy)]
 pub struct LinkNode<T: Copy> {
-    next: *mut LinkNode<T>,
-    prev: *mut *mut LinkNode<T>,
+    pub next: *mut LinkNode<T>,
+    pub prev: *mut *mut LinkNode<T>,
     pub data: T,
 }
 
@@ -33,18 +33,25 @@ impl<T: Copy> LinkList<T> {
     pub unsafe fn insert_head(&mut self, mut item: *mut LinkNode<T>) {
         if !self.empty() {
             (*item).next = self.head;
-            (*(self.head)).prev = ptr::addr_of_mut!(item);
+            (*(self.head)).prev = ptr::addr_of_mut!((*item).next);
         }
-        (*item).prev = ptr::null_mut();
+        (*item).prev = ptr::addr_of_mut!(self.head);
         self.head = item;
     }
 
-    pub fn pop_head(&mut self) -> Option<*mut LinkNode<T>> {
+    /// # Safety
+    ///
+    pub unsafe fn pop_head(&mut self) -> Option<*mut LinkNode<T>> {
         match self.empty() {
             true => None,
             false => {
                 let item = self.head;
-                self.head = unsafe { (*item).next };
+                if !(*item).next.is_null() {
+                    (*((*item).next)).prev = (*item).prev;
+                }
+                self.head = (*item).next;
+                (*item).next = ptr::null_mut();
+                (*item).prev = ptr::null_mut();
                 Some(item)
             }
         }
@@ -53,11 +60,13 @@ impl<T: Copy> LinkList<T> {
     /// # Safety
     ///
     pub unsafe fn remove(item: *mut LinkNode<T>) {
-        let item = *item;
+        let mut item = *item;
         if !item.next.is_null() {
             (*(item.next)).prev = item.prev;
         }
         *(item.prev) = item.next;
+        item.next = ptr::null_mut();
+        item.prev = ptr::null_mut();
     }
 }
 
