@@ -2,8 +2,11 @@ use core::{mem::size_of, ptr};
 
 use crate::{
     debugln,
-    kdef::queue::{LinkList, LinkNode},
-    println, ARRAY_PTR, PADDR, ROUND,
+    kdef::{
+        error::Error,
+        queue::{LinkList, LinkNode},
+    },
+    page2kva, println, ARRAY_PTR, PADDR, ROUND,
 };
 
 const PAGE_SIZE: usize = 4096;
@@ -87,4 +90,18 @@ pub fn page_init(pages: &mut *mut PageNode, freemem: &mut usize, npage: usize) -
     }
 
     page_free_list
+}
+
+pub fn page_alloc(
+    page_free_list: &mut PageList,
+    pages: &*mut PageNode,
+    // npage: usize,
+) -> Result<*mut PageNode, Error> {
+    match page_free_list.pop_head() {
+        None => Err(Error::NoMem),
+        Some(pp) => unsafe {
+            ptr::write_bytes(page2kva!(pp, *pages; PageNode) as *mut u8, 0, PAGE_SIZE);
+            Ok(pp)
+        },
+    }
 }
