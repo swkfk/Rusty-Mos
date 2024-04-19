@@ -1,13 +1,24 @@
 mod test_demo;
 
 #[cfg(ktest)]
+macro_rules! MAKE_TEST {
+    ($($field:tt :: $item:tt),*; $ktest: expr) => {
+        if cfg!(ktest_item = $ktest) {
+            $(
+                debugln!("$ Test {}({}) Begin!", $ktest, stringify!($item));
+                $field::$item();
+            )*
+            debugln!("$ Test {} Passed!", $ktest);
+        }
+    };
+}
+
+#[cfg(ktest)]
 pub fn test() {
     use crate::debugln;
+    use core::stringify;
 
-    debugln!("> ktests:mod.rs: Test Begin!");
-    if cfg!(ktest_item = "hello") {
-        test_demo::test_hello_world();
-    }
+    MAKE_TEST!(test_demo::test_hello_world, test_demo::test_hello_world; "hello");
 }
 
 #[cfg(not(ktest))]

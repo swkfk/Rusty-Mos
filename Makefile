@@ -17,7 +17,7 @@ CARGO_BUILD = $(CARGO) build $(CARGO_TARGET) $(CARGO_ZBUILD)
 
 build: clean
 ifneq ($(test),)
-	CARGO_BUILD_RUSTFLAGS="--cfg ktest_item=\"$(test)\" --cfg ktest" $(CARGO_BUILD)
+	CARGO_BUILD_RUSTFLAGS='--cfg ktest_item="$(test)" --cfg ktest' $(CARGO_BUILD)
 else
 	$(CARGO_BUILD)
 endif
