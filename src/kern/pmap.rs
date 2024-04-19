@@ -4,9 +4,10 @@ use crate::{
     debugln,
     kdef::{
         error::Error,
+        mmu::{PTE_C_CACHEABLE, PTE_V},
         queue::{LinkList, LinkNode},
     },
-    page2kva, println, ARRAY_PTR, PADDR, ROUND,
+    pa2page, page2kva, page2pa, println, ARRAY_PTR, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
 
 const PAGE_SIZE: usize = 4096;
@@ -14,6 +15,8 @@ const PAGE_SHIFT: usize = 12;
 
 pub type PageList = LinkList<PageData>;
 pub type PageNode = LinkNode<PageData>;
+pub type Pde = u32;
+pub type Pte = u32;
 
 #[derive(Clone, Copy)]
 pub struct PageData {
@@ -103,5 +106,65 @@ pub fn page_alloc(
             ptr::write_bytes(page2kva!(pp, *pages; PageNode) as *mut u8, 0, PAGE_SIZE);
             Ok(pp)
         },
+    }
+}
+
+pub fn page_free(page_free_list: &mut PageList, page: &mut *mut PageNode) {
+    assert_eq!(0, unsafe { **page }.data.pp_ref);
+    unsafe { page_free_list.insert_head(*page) };
+}
+
+pub fn page_decref(page_free_list: &mut PageList, page: &mut *mut PageNode) {
+    assert!(unsafe { **page }.data.pp_ref > 0);
+    unsafe { **page }.data.pp_ref -= 1;
+    if unsafe { **page }.data.pp_ref == 0 {
+        page_free(page_free_list, page);
+    }
+}
+
+pub fn pgdir_walk(
+    pgdir: *mut Pde,
+    va: usize,
+    create: bool,
+    page_free_list: &mut PageList,
+    pages: &*mut PageNode,
+) -> Result<*mut Pte, Error> {
+    let pgdir_entryp = (pgdir as u32 + (PDX!(va) * size_of::<Pde>()) as u32) as *mut Pte;
+    if 0 == PTE_V & unsafe { *(pgdir_entryp as *const Pte) } {
+        // Not Valid!
+        if create {
+            let pp = page_alloc(page_free_list, pages)?;
+            unsafe {
+                ptr::write(
+                    pgdir_entryp,
+                    (PTE_ADDR!(page2pa!(pp, *pages; PageNode)) as Pte | PTE_C_CACHEABLE | PTE_V),
+                );
+                (*pp).data.pp_ref = 1;
+            }
+        } else {
+            return Ok(ptr::null_mut());
+        }
+    }
+
+    unsafe {
+        Ok((KADDR!(PTE_ADDR!(*pgdir_entryp)) + (PTX!(va) * size_of::<Pte>()) as u32) as *mut Pte)
+    }
+}
+
+pub fn page_lookup(
+    pgdir: *mut Pde,
+    va: usize,
+    page_free_list: &mut PageList,
+    pages: &*mut PageNode,
+) -> Option<(*mut PageNode, *mut Pte)> {
+    if let Ok(pte) = pgdir_walk(pgdir, va, false, page_free_list, pages) {
+        if pte.is_null() || unsafe { *pte & PTE_V == 0 } {
+            None
+        } else {
+            let pp = pa2page!(unsafe { *pte }, *pages; PageNode) as *mut PageNode;
+            Some((pp, pte))
+        }
+    } else {
+        None
     }
 }

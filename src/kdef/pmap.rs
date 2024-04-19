@@ -18,3 +18,12 @@ macro_rules! page2kva {
         $crate::KADDR!($crate::page2pa!($pp, $pages; $t))
     }};
 }
+
+#[macro_export]
+macro_rules! pa2page {
+    ($pa:expr, $pages:expr; $t:ty) => {{
+        let ppn = $crate::PPN!($pa) as usize;
+        // assert!(ppn >= npage);
+        $pages as usize + ppn * size_of::<$t>()
+    }};
+}
