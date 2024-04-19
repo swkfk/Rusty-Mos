@@ -10,23 +10,23 @@ CARGO                   = cargo
 CARGO_TARGET            += --target mipsel-unknown-none
 CARGO_ZBUILD            += -Zbuild-std=core,alloc
 
-CARGO_BUILD = $(CARGO) build $(CARGO_TARGET) $(CARGO_ZBUILD)
+CARGO_BUILD = $(CARGO) build $(CARGO_TARGET)
 
-.all: build
+.all: run
 
-.PHONY: clean, doc
+.PHONY: build, clean, doc
 
-build: clean
+run: build
+	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)
+
+build:
 ifneq ($(test),)
 	CARGO_BUILD_RUSTFLAGS='--cfg ktest_item="$(test)" --cfg ktest' $(CARGO_BUILD)
 else
 	$(CARGO_BUILD)
 endif
 
-run:
-	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)
-
-dbg_run:
+dbg_run: build
 	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf) -s -S
 
 clean:
