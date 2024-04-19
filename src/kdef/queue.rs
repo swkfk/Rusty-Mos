@@ -30,7 +30,7 @@ impl<T: Copy> LinkList<T> {
 
     /// # Safety
     ///
-    pub unsafe fn insert_head(&mut self, mut item: *mut LinkNode<T>) {
+    pub unsafe fn insert_head(&mut self, item: *mut LinkNode<T>) {
         if !self.empty() {
             (*item).next = self.head;
             (*(self.head)).prev = ptr::addr_of_mut!((*item).next);
