@@ -5,6 +5,7 @@
 /// ## Visibility
 /// Error Codes for the *file system* is only seen in user-level
 #[repr(i8)]
+#[derive(Debug)]
 pub enum Error {
     Unspecified = 1,
     BadEnv,

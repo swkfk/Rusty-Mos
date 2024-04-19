@@ -20,4 +20,8 @@ macro_rules! MAKE_TEST {
     };
 }
 
-MAKE_TEST!("memory", test_memory_normal; test_memory::test_physical_memory_manage; (_1: &mut u8));
+MAKE_TEST!("memory", test_page; test_memory::test_page; (
+    _page_free_list: &mut crate::kern::pmap::PageList,
+    _pages: &mut *mut crate::kern::pmap::PageNode,
+    _freemem: &mut usize, _npage: usize
+));
