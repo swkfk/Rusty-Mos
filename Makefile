@@ -1,4 +1,5 @@
-mos_elf                 = target/mipsel-unknown-none/debug/rusty_mos
+target_path             = target/mipsel-unknown-none
+mos_elf                 = $(target_path)/debug/rusty_mos
 QEMU                    = qemu-system-mipsel
 QEMU_FLAGS              += -cpu 4Kc -m 64 -nographic -M malta \
 						$(shell [ -f '$(user_disk)' ] && echo '-drive id=ide0,file=$(user_disk),if=ide,format=raw ')\
@@ -13,7 +14,7 @@ CARGO_BUILD = $(CARGO) build $(CARGO_TARGET) $(CARGO_ZBUILD)
 
 .all: build
 
-.PHONY: clean
+.PHONY: clean, doc
 
 build: clean
 ifneq ($(test),)
@@ -30,3 +31,8 @@ dbg_run:
 
 clean:
 	$(CARGO) clean
+
+doc:
+	$(CARGO) doc $(CARGO_TARGET) $(CARGO_ZBUILD)
+	rm -r ./doc/
+	mv $(target_path)/doc/ .
