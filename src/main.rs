@@ -10,8 +10,7 @@ use rusty_mos::{
         machine::halt,
         pmap::{mips_detect_memory, mips_vm_init, page_init, PageNode},
     },
-    ktests::test,
-    println,
+    println, CALL_TEST,
 };
 
 global_asm!(include_str!("start.S"));
@@ -46,7 +45,8 @@ pub extern "C" fn rust_mips_init(
     mips_detect_memory(&mut npage, memsize);
     mips_vm_init(&mut pages, &mut freemem, npage, memsize);
 
-    test();
+    let mut a = 1;
+    CALL_TEST!(test_memory_normal; (&mut a));
 
     let _page_free_list = page_init(&mut pages, &mut freemem, npage);
 

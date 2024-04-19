@@ -1,25 +1,23 @@
-mod test_demo;
+mod test_memory;
 
-#[cfg(ktest)]
-macro_rules! MAKE_TEST {
-    ($($field:tt :: $item:tt),*; $ktest: expr) => {
-        if cfg!(ktest_item = $ktest) {
-            $(
-                debugln!("$ Test {}({}) Begin!", $ktest, stringify!($item));
-                $field::$item();
-            )*
-            debugln!("$ Test {} Passed!", $ktest);
-        }
+#[macro_export]
+macro_rules! CALL_TEST {
+    ($func: ident; ($($args:expr),*)) => {
+        $crate::ktests::$func($($args,)*);
     };
 }
 
-#[cfg(ktest)]
-pub fn test() {
-    use crate::debugln;
-    use core::stringify;
-
-    MAKE_TEST!(test_demo::test_hello_world, test_demo::test_hello_world; "hello");
+macro_rules! MAKE_TEST {
+    ($ktest: expr, $func: ident; $field:tt :: $item:tt; ($($args:ident : $ty:ty),*)) => {
+        #[cfg(ktest_item = $ktest)]
+        pub fn $func($($args: $ty,)*) {
+            crate::debugln!("$ Test {}({}) Begin!", $ktest, core::stringify!($item));
+            $field::$item($($args,)*);
+            crate::debugln!("$ Test {}({}) Passed!", $ktest, core::stringify!($item));
+        }
+        #[cfg(not(ktest_item = $ktest))]
+        pub fn $func($($args: $ty,)*) {}
+    };
 }
 
-#[cfg(not(ktest))]
-pub fn test() {}
+MAKE_TEST!("memory", test_memory_normal; test_memory::test_physical_memory_manage; (_1: &mut u8));
