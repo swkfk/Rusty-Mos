@@ -46,7 +46,9 @@ pub extern "C" fn rust_mips_init(
     mips_vm_init(&mut pages, &mut freemem, npage, memsize);
 
     let mut page_free_list = page_init(&mut pages, &mut freemem, npage);
+
     CALL_TEST!(test_page; (&mut page_free_list, &mut pages, &mut freemem, npage));
+    CALL_TEST!(test_linklist; ());
 
     halt();
 }

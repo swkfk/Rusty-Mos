@@ -25,3 +25,4 @@ MAKE_TEST!("memory", test_page; test_memory::test_page; (
     _pages: &mut *mut crate::kern::pmap::PageNode,
     _freemem: &mut usize, _npage: usize
 ));
+MAKE_TEST!("memory", test_linklist; test_memory::test_linklist; ());
