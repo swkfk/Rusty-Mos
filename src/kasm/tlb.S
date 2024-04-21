@@ -1,6 +1,4 @@
-.include "src/kasm/include/asm.S"
-
-LEAF(tlb_out)
+LEAF tlb_out
 .set noreorder
 	mfc0    $t0, CP0_ENTRYHI
 	mtc0    $a0, CP0_ENTRYHI
@@ -29,5 +27,5 @@ LEAF(tlb_out)
 
 NO_SUCH_ENTRY:
 	mtc0    $t0, CP0_ENTRYHI
-	j       ra
-END(tlb_out)
+	j       $ra
+END tlb_out

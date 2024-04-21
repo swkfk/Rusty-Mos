@@ -13,6 +13,8 @@ use rusty_mos::{
     println, CALL_TEST,
 };
 
+global_asm!(include_str!("kasm/include/inc.S"));
+global_asm!(include_str!("kasm/tlb.S"));
 global_asm!(include_str!("start.S"));
 
 #[panic_handler]

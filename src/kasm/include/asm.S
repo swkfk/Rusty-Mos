@@ -1,5 +1,3 @@
-.include "src/kasm/include/cp0reg.S"
-
 .macro LEAF symbol
 	.globl \symbol;
 	.align 2;

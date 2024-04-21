@@ -1,7 +1,3 @@
-.include "src/kasm/include/asm.S"
-.include "src/kasm/include/mmu.S"
-
-
 .text
 .global _start;
 _start:
