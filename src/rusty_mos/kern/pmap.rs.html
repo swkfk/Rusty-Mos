@@ -168,20 +168,72 @@
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
 <a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::{mem::size_of, ptr};
 
 <span class="kw">use crate</span>::{
     debugln,
     kdef::{
         error::KError,
-        mmu::{PTE_C_CACHEABLE, PTE_V},
+        mmu::{PGSHIFT, PTE_C_CACHEABLE, PTE_V},
         queue::{LinkList, LinkNode},
     },
     pa2page, page2kva, page2pa, println, ARRAY_PTR, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
 
+<span class="kw">use </span><span class="kw">super</span>::tlbex::tlb_invalidate;
+
 <span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
-<span class="kw">const </span>PAGE_SHIFT: usize = <span class="number">12</span>;
 
 <span class="kw">pub type </span>PageList = LinkList&lt;PageData&gt;;
 <span class="kw">pub type </span>PageNode = LinkNode&lt;PageData&gt;;
@@ -251,7 +303,7 @@
     <span class="kw-2">*</span>freemem = <span class="macro">ROUND!</span>(<span class="kw-2">*</span>freemem; PAGE_SIZE);
 
     <span class="kw">let </span><span class="kw-2">mut </span>page_id = <span class="number">0</span>;
-    <span class="kw">while </span>page_id &lt; npage &amp;&amp; page_id &lt;&lt; PAGE_SHIFT &lt; <span class="macro">PADDR!</span>(<span class="kw-2">*</span>freemem) {
+    <span class="kw">while </span>page_id &lt; npage &amp;&amp; page_id &lt;&lt; PGSHIFT &lt; <span class="macro">PADDR!</span>(<span class="kw-2">*</span>freemem) {
         <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span><span class="macro">ARRAY_PTR!</span>(<span class="kw-2">*</span>pages; page_id, PageNode)).data).pp_ref = <span class="number">1 </span>};
         page_id += <span class="number">1</span>;
     }
@@ -321,6 +373,42 @@
     }
 }
 
+<span class="doccomment">/// # Safety
+///
+</span><span class="kw">pub unsafe fn </span>page_insert(
+    pgdir: <span class="kw-2">*mut </span>Pde,
+    va: usize,
+    asid: u32,
+    perm: u32,
+    pp: <span class="kw-2">*mut </span>PageNode,
+    page_free_list: <span class="kw-2">&amp;mut </span>PageList,
+    pages: <span class="kw-2">&amp;*mut </span>PageNode,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), KError&gt; {
+    <span class="kw">if let </span><span class="prelude-val">Ok</span>(pte) = pgdir_walk(pgdir, va, <span class="bool-val">false</span>, page_free_list, pages) {
+        <span class="kw">if </span>!pte.is_null() &amp;&amp; <span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte &amp; PTE_V } != <span class="number">0 </span>{
+            <span class="kw">if </span>pp <span class="kw">as </span>usize == <span class="macro">pa2page!</span>(<span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte }, <span class="kw-2">*</span>pages; PageNode) {
+                page_remove(pgdir, va, asid, page_free_list, pages);
+            } <span class="kw">else </span>{
+                tlb_invalidate(asid, va);
+                ptr::write(
+                    pte,
+                    <span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V,
+                )
+            }
+        }
+    }
+
+    tlb_invalidate(asid, va);
+    <span class="kw">let </span>pte = pgdir_walk(pgdir, va, <span class="bool-val">true</span>, page_free_list, pages)<span class="question-mark">?</span>;
+    ptr::write(
+        pte,
+        <span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V,
+    );
+    (<span class="kw-2">*</span>pp).data.pp_ref += <span class="number">1</span>;
+
+    <span class="prelude-val">Ok</span>(())
+}
+
 <span class="kw">pub fn </span>page_lookup(
     pgdir: <span class="kw-2">*mut </span>Pde,
     va: usize,
@@ -337,5 +425,19 @@
     } <span class="kw">else </span>{
         <span class="prelude-val">None
     </span>}
+}
+
+<span class="kw">pub fn </span>page_remove(
+    pgdir: <span class="kw-2">*mut </span>Pde,
+    va: usize,
+    asid: u32,
+    page_free_list: <span class="kw-2">&amp;mut </span>PageList,
+    pages: <span class="kw-2">&amp;*mut </span>PageNode,
+) {
+    <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw-2">mut </span>pp, pte)) = page_lookup(pgdir, va, page_free_list, pages) {
+        page_decref(page_free_list, <span class="kw-2">&amp;mut </span>pp);
+        <span class="kw">unsafe </span>{ ptr::write(pte, <span class="number">0</span>) };
+        tlb_invalidate(asid, va);
+    }
 }
 </code></pre></div></section></main></body></html>
