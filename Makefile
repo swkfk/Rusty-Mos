@@ -1,7 +1,7 @@
 target_path             = target/mipsel-unknown-none
 mos_elf                 = $(target_path)/debug/rusty_mos
 QEMU                    = qemu-system-mipsel
-QEMU_FLAGS              += -cpu 4Kc -m 64 -nographic -M malta \
+QEMU_FLAGS              += -cpu 24Kc -m 64 -nographic -M malta \
 						$(shell [ -f '$(user_disk)' ] && echo '-drive id=ide0,file=$(user_disk),if=ide,format=raw ')\
 						$(shell [ -f '$(empty_disk)' ] && echo '-drive id=ide1,file=$(empty_disk),if=ide,format=raw ')\
 						-no-reboot
@@ -12,12 +12,9 @@ CARGO_ZBUILD            += -Zbuild-std=core,alloc
 
 CARGO_BUILD = $(CARGO) build $(CARGO_TARGET)
 
-.all: run
+.all: build
 
 .PHONY: build, clean, doc
-
-run: build
-	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)
 
 build:
 ifneq ($(test),)
@@ -26,7 +23,10 @@ else
 	$(CARGO_BUILD)
 endif
 
-dbg_run: build
+run:
+	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)
+
+dbg_run:
 	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf) -s -S
 
 clean:
