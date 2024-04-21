@@ -10,6 +10,8 @@ use crate::{
     pa2page, page2kva, page2pa, println, ARRAY_PTR, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
 
+use super::tlbex::tlb_invalidate;
+
 const PAGE_SIZE: usize = 4096;
 const PAGE_SHIFT: usize = 12;
 
@@ -151,6 +153,42 @@ pub fn pgdir_walk(
     }
 }
 
+/// # Safety
+///
+pub unsafe fn page_insert(
+    pgdir: *mut Pde,
+    va: usize,
+    asid: u32,
+    perm: u32,
+    pp: *mut PageNode,
+    page_free_list: &mut PageList,
+    pages: &*mut PageNode,
+) -> Result<(), KError> {
+    if let Ok(pte) = pgdir_walk(pgdir, va, false, page_free_list, pages) {
+        if !pte.is_null() && unsafe { *pte & PTE_V } != 0 {
+            if pp as usize == pa2page!(unsafe { *pte }, *pages; PageNode) {
+                page_remove(pgdir, va, asid, page_free_list, pages);
+            } else {
+                tlb_invalidate(asid, va);
+                ptr::write(
+                    pte,
+                    page2pa!(pp, *pages; PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
+                )
+            }
+        }
+    }
+
+    tlb_invalidate(asid, va);
+    let pte = pgdir_walk(pgdir, va, true, page_free_list, pages)?;
+    ptr::write(
+        pte,
+        page2pa!(pp, *pages; PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
+    );
+    (*pp).data.pp_ref += 1;
+
+    Ok(())
+}
+
 pub fn page_lookup(
     pgdir: *mut Pde,
     va: usize,
@@ -166,5 +204,19 @@ pub fn page_lookup(
         }
     } else {
         None
+    }
+}
+
+pub fn page_remove(
+    pgdir: *mut Pde,
+    va: usize,
+    asid: u32,
+    page_free_list: &mut PageList,
+    pages: &*mut PageNode,
+) {
+    if let Some((mut pp, pte)) = page_lookup(pgdir, va, page_free_list, pages) {
+        page_decref(page_free_list, &mut pp);
+        unsafe { ptr::write(pte, 0) };
+        tlb_invalidate(asid, va);
     }
 }
