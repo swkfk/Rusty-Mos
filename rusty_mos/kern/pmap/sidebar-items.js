@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["mips_detect_memory","mips_vm_init","page_alloc","page_decref","page_free","page_init","page_lookup","pgdir_walk"],"struct":["PageData"],"type":["PageList","PageNode","Pde","Pte"]};

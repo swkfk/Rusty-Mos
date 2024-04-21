@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"rusty_mos":[["impl Clone for <a class=\"struct\" href=\"rusty_mos/kern/pmap/struct.PageData.html\" title=\"struct rusty_mos::kern::pmap::PageData\">PageData</a>"],["impl&lt;T: Clone + Copy&gt; Clone for <a class=\"struct\" href=\"rusty_mos/kdef/queue/struct.LinkNode.html\" title=\"struct rusty_mos::kdef::queue::LinkNode\">LinkNode</a>&lt;T&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
