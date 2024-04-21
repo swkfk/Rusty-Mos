@@ -1,3 +1,4 @@
+pub mod bitops;
 pub mod error;
 pub mod mmu;
 pub mod pmap;

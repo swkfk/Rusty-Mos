@@ -17,6 +17,8 @@
 pub const PGSHIFT: u8 = 12;
 /// Shifted the *Page Table Offset* and *In-Page Offset* out to get the **Page Directory Offset**
 pub const PDSHIFT: u8 = 22;
+/// The maximum count of all the **asid**
+pub const NASID: u32 = 256;
 
 /// Page table / directory entry flag shift
 const PTE_HARDFLAG_SHIFT: u8 = 6;
