@@ -4,7 +4,7 @@ use crate::{
     debugln,
     kdef::{
         error::KError,
-        mmu::{PTE_C_CACHEABLE, PTE_V},
+        mmu::{PGSHIFT, PTE_C_CACHEABLE, PTE_V},
         queue::{LinkList, LinkNode},
     },
     pa2page, page2kva, page2pa, println, ARRAY_PTR, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
@@ -13,7 +13,6 @@ use crate::{
 use super::tlbex::tlb_invalidate;
 
 const PAGE_SIZE: usize = 4096;
-const PAGE_SHIFT: usize = 12;
 
 pub type PageList = LinkList<PageData>;
 pub type PageNode = LinkNode<PageData>;
@@ -83,7 +82,7 @@ pub fn page_init(pages: &mut *mut PageNode, freemem: &mut usize, npage: usize) -
     *freemem = ROUND!(*freemem; PAGE_SIZE);
 
     let mut page_id = 0;
-    while page_id < npage && page_id << PAGE_SHIFT < PADDR!(*freemem) {
+    while page_id < npage && page_id << PGSHIFT < PADDR!(*freemem) {
         unsafe { ((*ARRAY_PTR!(*pages; page_id, PageNode)).data).pp_ref = 1 };
         page_id += 1;
     }

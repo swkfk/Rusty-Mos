@@ -4,7 +4,7 @@
 #[macro_export]
 macro_rules! page2ppn {
     ($pp:expr, $pages:expr; $t:ty) => {{
-        (($pp as usize - $pages as usize) / size_of::<$t>()) as usize
+        (($pp as usize - $pages as usize) / core::mem::size_of::<$t>()) as usize
     }};
 }
 
@@ -14,7 +14,7 @@ macro_rules! page2ppn {
 #[macro_export]
 macro_rules! page2pa {
     ($pp:expr, $pages:expr; $t:ty) => {{
-        $crate::page2ppn!($pp, $pages; $t) << PAGE_SHIFT
+        $crate::page2ppn!($pp, $pages; $t) << $crate::kdef::mmu::PGSHIFT
     }};
 }
 
