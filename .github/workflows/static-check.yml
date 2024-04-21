@@ -1,0 +1,30 @@
+name: Static Check
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  check:
+    name: Cargo Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust Nightly ToolChain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Install Necessary Components
+        run: |
+          rustup component add --toolchain nightly rustfmt
+          rustup component add --toolchain nightly rust-src
+          rustup component add --toolchain nightly clippy
+      - name: Format Check
+        run: cargo fmt --all -- --check
+      - name: Check with Cargo-Check
+        run: cargo check --target mipsel-unknown-none -Zbuild-std=core,alloc
+      - name: Check with Clippy
+        run: cargo clippy --target mipsel-unknown-none -Zbuild-std=core,alloc -- -D warnings

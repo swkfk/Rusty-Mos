@@ -1,0 +1,34 @@
+name: Rust Doc Deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  doc:
+    name: Docs Generate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust Nightly ToolChain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Install Necessary Components
+        run: |
+          rustup component add --toolchain nightly rust-src
+      - name: Generate the Documents
+        run: cargo doc --target mipsel-unknown-none -Zbuild-std=core,alloc
+      - name: Move the Documents
+        run: mv target/mipsel-unknown-none/doc/ .
+      - name: Deploy the Documents into GitHub Page
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: docs
+          folder: doc
