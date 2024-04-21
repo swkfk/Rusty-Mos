@@ -1,5 +1,6 @@
-#include <asm/asm.h>
-#include <mmu.h>
+.include "src/kasm/include/asm.S"
+.include "src/kasm/include/mmu.S"
+
 
 .text
 .global _start;
@@ -17,9 +18,9 @@ clear_bss_loop:
 
 clear_bss_done:
 	# disable interrupts
-	mtc0    $zero, $12  # TODO: CP0_STATUS, to include instead of writing it directly
+	mtc0    $zero, CP0_STATUS
 
 	# set up the kernel stack
-	la		$sp, 0x80400000  # TODO: KSTACKTOP, to include instead of writing it directly
+	la		$sp, KSTACKTOP
 	# jump to rust_mips_main */
 	j		rust_mips_init
