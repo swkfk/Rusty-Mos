@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["test_linklist","test_page"]};
+window.SIDEBAR_ITEMS = {"fn":["test_linklist","test_page","test_page_strong","test_tlb_refill"]};

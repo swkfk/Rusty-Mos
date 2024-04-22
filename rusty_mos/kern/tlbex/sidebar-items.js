@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["tlb_invalidate","tlb_out"]};
+window.SIDEBAR_ITEMS = {"fn":["_do_tlb_refill","tlb_init_global_vars","tlb_invalidate","tlb_out"]};
