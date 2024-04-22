@@ -1,3 +1,4 @@
+mod test_env;
 mod test_memory;
 
 #[macro_export]
@@ -24,3 +25,5 @@ MAKE_TEST!("memory", test_page; test_memory::test_page; ());
 MAKE_TEST!("memory", test_page_strong; test_memory::test_page_strong; ());
 MAKE_TEST!("memory", test_tlb_refill; test_memory::test_tlb_refill; ());
 MAKE_TEST!("memory", test_linklist; test_memory::test_linklist; ());
+
+MAKE_TEST!("env", test_tailq; test_env::test_tailq; ());

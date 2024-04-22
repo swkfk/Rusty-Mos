@@ -53,5 +53,7 @@ pub extern "C" fn rust_mips_init(
     CALL_TEST!(test_page_strong; ());
     CALL_TEST!(test_tlb_refill; ());
 
+    CALL_TEST!(test_tailq; ());
+
     halt();
 }

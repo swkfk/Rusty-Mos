@@ -1,11 +1,15 @@
-//! Link List implemented with Rust, which is similar to the kernel queue of the mos / Linux
+//! Link List implemented with Rust, which is similar to the kernel queue of
+//! the mos / Linux
+//!
+//! The `LinkList` is a simple-linked-list, while the `TailLinkList` is a
+//! tail-linked-list.
 //!
 //! The linking-filed in LinkNode struct contains two raw pointers:
 //! - `next`: pointing to the next LinkNode
 //! - `prev`: pointing to the previous LinkNode's `next` field
 //!
 
-use core::ptr;
+use core::ptr::{self, addr_of_mut, null_mut};
 
 /// The head struct of the LinkList
 ///
@@ -13,10 +17,16 @@ use core::ptr;
 ///
 /// # Generics
 /// The type `T` indicates the data stored in the link list.
+#[derive(Clone, Copy)]
 pub struct LinkList<T: Copy> {
     /// Pointing to the first node of this link list.
     /// The list is empty if and only if the `head` is null.
     pub head: *mut LinkNode<T>,
+}
+
+pub struct TailLinkList<T: Copy> {
+    pub head: *mut LinkNode<T>,
+    pub tail: *mut *mut LinkNode<T>,
 }
 
 /// The node struct of the LinkList
@@ -80,12 +90,7 @@ impl<T: Copy> LinkList<T> {
             true => None,
             false => {
                 let item = self.head;
-                if !(*item).next.is_null() {
-                    (*((*item).next)).prev = (*item).prev;
-                }
-                self.head = (*item).next;
-                (*item).next = ptr::null_mut();
-                (*item).prev = ptr::null_mut();
+                Self::remove(item);
                 Some(item)
             }
         }
@@ -96,13 +101,81 @@ impl<T: Copy> LinkList<T> {
     /// # Safety
     /// The parameter `item` *SHALL* be mutably-visitable and *SHALL* be in an valid link list!
     pub unsafe fn remove(item: *mut LinkNode<T>) {
-        let mut item = *item;
-        if !item.next.is_null() {
-            (*(item.next)).prev = item.prev;
+        if !(*item).next.is_null() {
+            (*((*item).next)).prev = (*item).prev;
         }
-        *(item.prev) = item.next;
-        item.next = ptr::null_mut();
-        item.prev = ptr::null_mut();
+        *((*item).prev) = (*item).next;
+        (*item).next = ptr::null_mut();
+        (*item).prev = ptr::null_mut();
+    }
+}
+
+impl<T: Copy> Default for TailLinkList<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T: Copy> TailLinkList<T> {
+    pub const fn new() -> TailLinkList<T> {
+        TailLinkList {
+            head: null_mut(),
+            tail: null_mut(),
+        }
+    }
+
+    pub fn empty(&self) -> bool {
+        self.head.is_null()
+    }
+
+    pub fn enable(&mut self) {
+        self.tail = addr_of_mut!(self.head);
+    }
+
+    /// # Safety
+    ///
+    pub unsafe fn insert_head(&mut self, item: *mut LinkNode<T>) {
+        (*item).next = self.head;
+        if !(*item).next.is_null() {
+            (*(self.head)).prev = ptr::addr_of_mut!((*item).next);
+        } else {
+            self.tail = ptr::addr_of_mut!((*item).next);
+        }
+        self.head = item;
+        (*item).prev = ptr::addr_of_mut!(self.head);
+    }
+
+    /// # Safety
+    ///
+    pub unsafe fn insert_tail(&mut self, item: *mut LinkNode<T>) {
+        (*item).next = null_mut();
+        (*item).prev = self.tail;
+        *self.tail = item;
+        self.tail = ptr::addr_of_mut!((*item).next);
+    }
+
+    /// # Safety
+    ///
+    pub unsafe fn pop_head(&mut self) -> Option<*mut LinkNode<T>> {
+        match self.empty() {
+            true => None,
+            false => {
+                let item = self.head;
+                self.remove(item);
+                Some(item)
+            }
+        }
+    }
+
+    /// # Safety
+    ///
+    pub unsafe fn remove(&mut self, item: *mut LinkNode<T>) {
+        if !(*item).next.is_null() {
+            (*((*item).next)).prev = (*item).prev;
+        } else {
+            self.tail = (*item).prev;
+        }
+        *((*item).prev) = (*item).next;
     }
 }
 
