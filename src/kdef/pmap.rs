@@ -37,3 +37,20 @@ macro_rules! pa2page {
         $pages as usize + ppn * size_of::<$t>()
     }};
 }
+
+#[macro_export]
+macro_rules! va2pa {
+    ($pgdir:expr, $va:expr) => {{
+        let pgdir = $crate::ARRAY_PTR!($pgdir; $crate::PDX!($va), $crate::kern::pmap::Pde);
+        if 0 == (*pgdir & $crate::kdef::mmu::PTE_V) {
+            !0
+        } else {
+            let p = $crate::KADDR!($crate::PTE_ADDR!(*pgdir)) as *mut $crate::kern::pmap::Pte;
+            if 0 == (*$crate::ARRAY_PTR!(p; $crate::PTX!($va), $crate::kern::pmap::Pte) & $crate::kdef::mmu::PTE_V) {
+                !0
+            } else {
+                $crate::PTE_ADDR!(*$crate::ARRAY_PTR!(p; $crate::PTX!($va), $crate::kern::pmap::Pte) as u32) as usize
+            }
+        }
+    }};
+}

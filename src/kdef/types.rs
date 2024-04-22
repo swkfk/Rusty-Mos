@@ -17,6 +17,6 @@ macro_rules! ROUND {
 #[macro_export]
 macro_rules! ARRAY_PTR {
     ($array: expr; $i: expr, $t: ty) => {
-        (($array as usize) + $i * size_of::<$t>()) as *mut $t
+        (($array as usize) + $i * core::mem::size_of::<$t>()) as *mut $t
     };
 }
