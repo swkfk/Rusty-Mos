@@ -12,6 +12,8 @@ use crate::{
 
 use super::tlbex::tlb_invalidate;
 
+pub static mut CUR_PGDIR: *mut Pde = ptr::null_mut();
+
 const PAGE_SIZE: usize = 4096;
 
 pub type PageList = LinkList<PageData>;

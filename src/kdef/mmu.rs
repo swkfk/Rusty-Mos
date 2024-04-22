@@ -25,8 +25,31 @@ const PTE_HARDFLAG_SHIFT: u8 = 6;
 
 /// Valid bit. If 0 any address matching this entry will cause a tlb miss exception (TLBL/TLBS).
 pub const PTE_V: u32 = 0x0002 << PTE_HARDFLAG_SHIFT;
+pub const PTE_D: u32 = 0x0004 << PTE_HARDFLAG_SHIFT;
 /// Cache Coherency Attributes bit.
 pub const PTE_C_CACHEABLE: u32 = 0x0018 << PTE_HARDFLAG_SHIFT;
+
+pub const PAGE_SIZE: usize = 1 << PGSHIFT;
+
+const PDMAP: usize = 1 << PDSHIFT;
+const PTMAP: usize = PAGE_SIZE;
+
+pub const KERNBASE: usize = 0x80020000;
+
+pub const KSTACKTOP: usize = ULIM + PDMAP;
+pub const ULIM: usize = 0x80000000;
+
+pub const UVPT: usize = ULIM - PDMAP;
+pub const UPAGES: usize = UVPT - PDMAP;
+pub const UENVS: usize = UPAGES - PDMAP;
+
+pub const UTOP: usize = UENVS;
+pub const UXSTACKTOP: usize = UTOP;
+
+pub const USTACKTOP: usize = UTOP - 2 * PTMAP;
+pub const UTEXT: usize = PDMAP;
+pub const UCOW: usize = UTEXT - PTMAP;
+pub const UTEMP: usize = UCOW - PTMAP;
 
 /// Get the physical address of the virtual address in **kernel segment**
 ///

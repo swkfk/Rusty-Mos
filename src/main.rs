@@ -9,6 +9,7 @@ use rusty_mos::{
     kern::{
         machine::halt,
         pmap::{mips_detect_memory, mips_vm_init, page_init, PageNode},
+        tlbex::tlb_init_global_vars,
     },
     println, CALL_TEST,
 };
@@ -48,6 +49,8 @@ pub extern "C" fn rust_mips_init(
     mips_vm_init(&mut pages, &mut freemem, npage, memsize);
 
     let mut page_free_list = page_init(&mut pages, &mut freemem, npage);
+
+    tlb_init_global_vars(&mut page_free_list, &pages);
 
     CALL_TEST!(test_page; (&mut page_free_list, &mut pages, &mut freemem, npage));
     CALL_TEST!(test_linklist; ());
