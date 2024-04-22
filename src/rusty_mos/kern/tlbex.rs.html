@@ -66,48 +66,15 @@
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
-<a href="#69" id="69">69</a>
-<a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a>
-<a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
-<a href="#76" id="76">76</a>
-<a href="#77" id="77">77</a>
-<a href="#78" id="78">78</a>
-<a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-<a href="#87" id="87">87</a>
-<a href="#88" id="88">88</a>
-<a href="#89" id="89">89</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     kdef::mmu::{NASID, PAGE_SIZE, PGSHIFT, PTE_D, UENVS, ULIM, UPAGES, USTACKTOP, UTEMP, UVPT},
     GEN_MASK, PTE_ADDR,
 };
 
-<span class="kw">use </span><span class="kw">crate</span>::kern::pmap::{
-    page_alloc, page_insert, page_lookup, PageList, PageNode, Pde, Pte, CUR_PGDIR,
-};
-
-<span class="kw">static </span><span class="kw-2">mut </span>PAGES: <span class="kw-2">*mut </span>PageNode = core::ptr::null_mut();
-<span class="kw">static </span><span class="kw-2">mut </span>PAGE_FREE_LIST: <span class="kw-2">*mut </span>PageList = core::ptr::null_mut();
+<span class="kw">use </span><span class="kw">crate</span>::kern::pmap::{page_alloc, page_insert, page_lookup, Pde, Pte, CUR_PGDIR};
 
 <span class="kw">extern </span><span class="string">"C" </span>{
     <span class="kw">pub fn </span>tlb_out(entryhi: u32);
-}
-
-<span class="kw">pub fn </span>tlb_init_global_vars(page_free_list: <span class="kw-2">&amp;mut </span>PageList, pages: <span class="kw-2">&amp;*mut </span>PageNode) {
-    <span class="kw">unsafe </span>{
-        PAGES = <span class="kw-2">*</span>pages;
-        PAGE_FREE_LIST = <span class="macro">core::ptr::addr_of_mut!</span>(<span class="kw-2">*</span>page_free_list);
-    }
 }
 
 <span class="kw">pub fn </span>tlb_invalidate(asid: u32, va: usize) {
@@ -117,11 +84,6 @@
 }
 
 <span class="kw">fn </span>passive_alloc(va: usize, pgdir: <span class="kw-2">*mut </span>Pde, asid: u32) {
-    <span class="kw">unsafe </span>{
-        <span class="kw">if </span>PAGES.is_null() || PAGE_FREE_LIST.is_null() {
-            <span class="macro">panic!</span>(<span class="string">"Tlb cannot access to the global vars!"</span>)
-        }
-    }
     <span class="kw">if </span>va &lt; UTEMP {
         <span class="macro">panic!</span>(<span class="string">"Address too low"</span>);
     }
@@ -142,16 +104,13 @@
         <span class="macro">panic!</span>(<span class="string">"Kernel address"</span>);
     }
     <span class="kw">unsafe </span>{
-        <span class="kw">let </span>pages = PAGES;
-        <span class="kw">let </span>pp = page_alloc(<span class="kw-2">&amp;mut *</span>PAGE_FREE_LIST, <span class="kw-2">&amp;</span>pages).unwrap();
+        <span class="kw">let </span>pp = page_alloc().unwrap();
         page_insert(
             pgdir,
             <span class="macro">PTE_ADDR!</span>(va),
             asid,
             <span class="kw">if </span>(UVPT..ULIM).contains(<span class="kw-2">&amp;</span>va) { <span class="number">0 </span>} <span class="kw">else </span>{ PTE_D },
             pp,
-            <span class="kw-2">&amp;mut *</span>PAGE_FREE_LIST,
-            <span class="kw-2">&amp;</span>pages,
         )
         .unwrap();
     }
@@ -162,9 +121,8 @@
     tlb_invalidate(asid, va);
 
     <span class="kw">unsafe </span>{
-        <span class="kw">let </span>pages = PAGES;
         <span class="kw">loop </span>{
-            <span class="kw">match </span>page_lookup(CUR_PGDIR, va, <span class="kw-2">&amp;mut *</span>PAGE_FREE_LIST, <span class="kw-2">&amp;</span>pages) {
+            <span class="kw">match </span>page_lookup(CUR_PGDIR, va) {
                 <span class="prelude-val">None </span>=&gt; passive_alloc(va, CUR_PGDIR, asid),
                 <span class="prelude-val">Some</span>((<span class="kw">_</span>, ppte)) =&gt; {
                     <span class="kw">let </span>ppte = (ppte <span class="kw">as </span>u32 &amp; !<span class="number">0x7</span>) <span class="kw">as </span><span class="kw-2">*mut </span>Pte;

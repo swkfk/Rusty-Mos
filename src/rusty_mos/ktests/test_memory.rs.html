@@ -382,25 +382,20 @@
 <a href="#382" id="382">382</a>
 <a href="#383" id="383">383</a>
 <a href="#384" id="384">384</a>
-<a href="#385" id="385">385</a>
-<a href="#386" id="386">386</a>
-<a href="#387" id="387">387</a>
-<a href="#388" id="388">388</a>
 </pre></div><pre class="rust"><code><span class="attr">#[cfg(ktest_item = <span class="string">"memory"</span>)]
-</span><span class="kw">pub fn </span>test_page(
-    page_free_list: <span class="kw-2">&amp;mut </span><span class="kw">crate</span>::kern::pmap::PageList,
-    pages: <span class="kw-2">&amp;mut *mut </span><span class="kw">crate</span>::kern::pmap::PageNode,
-) {
+</span><span class="kw">pub fn </span>test_page() {
     <span class="kw">use </span><span class="kw">crate</span>::kdef::mmu::{PTE_C_CACHEABLE, PTE_V};
-    <span class="kw">use </span><span class="kw">crate</span>::kern::pmap::{page_alloc, page_free, page_insert, PageList, PageNode};
-    <span class="kw">use crate</span>::{kern::pmap::Pde, page2kva};
+    <span class="kw">use </span><span class="kw">crate</span>::kern::pmap::{
+        page_alloc, page_free, page_insert, PageList, PageNode, Pde, PAGES, PAGE_FREE_LIST,
+    };
+    <span class="kw">use </span><span class="kw">crate</span>::page2kva;
 
-    <span class="kw">let </span>pp = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span>boot_pgdir = <span class="macro">page2kva!</span>(pp, <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>Pde;
+    <span class="kw">let </span>pp = page_alloc().unwrap();
+    <span class="kw">let </span>boot_pgdir = <span class="macro">page2kva!</span>(pp, <span class="kw">unsafe</span>{PAGES}; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>Pde;
 
-    <span class="kw">let </span><span class="kw-2">mut </span>pp0 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span>pp1 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>pp2 = page_alloc(page_free_list, pages).unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp0 = page_alloc().unwrap();
+    <span class="kw">let </span>pp1 = page_alloc().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp2 = page_alloc().unwrap();
     <span class="macro">assert!</span>(!pp0.is_null());
     <span class="macro">assert!</span>(!pp1.is_null() &amp;&amp; pp1 != pp0);
     <span class="macro">assert!</span>(!pp2.is_null() &amp;&amp; pp2 != pp0);
@@ -410,37 +405,43 @@
         boot_pgdir <span class="kw">as </span>usize
     );
 
-    <span class="kw">let </span><span class="kw-2">mut </span>zfl = PageList::new();
-    <span class="macro">assert!</span>(page_alloc(<span class="kw-2">&amp;mut </span>zfl, pages).is_err());
-    <span class="macro">assert!</span>(<span class="kw">unsafe </span>{ page_insert(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1, <span class="kw-2">&amp;mut </span>zfl, pages).is_err() });
-    page_free(<span class="kw-2">&amp;mut </span>zfl, <span class="kw-2">&amp;mut </span>pp0);
-    <span class="macro">assert!</span>(<span class="kw">unsafe </span>{ page_insert(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1, <span class="kw-2">&amp;mut </span>zfl, pages).is_ok() });
+    <span class="kw">let </span>zfl;
+    <span class="kw">unsafe </span>{
+        zfl = PAGE_FREE_LIST;
+        PAGE_FREE_LIST = PageList::new();
+    }
+    <span class="macro">assert!</span>(page_alloc().is_err());
+    <span class="macro">assert!</span>(<span class="kw">unsafe </span>{ page_insert(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1).is_err() });
+    page_free(<span class="kw-2">&amp;mut </span>pp0);
+    <span class="macro">assert!</span>(<span class="kw">unsafe </span>{ page_insert(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1).is_ok() });
 
     <span class="macro">assert_eq!</span>(PTE_C_CACHEABLE | PTE_V, <span class="kw">unsafe </span>{
         core::ptr::read(boot_pgdir) &amp; <span class="number">0xFFF
     </span>});
 
-    <span class="macro">assert_eq!</span>(<span class="macro">crate::page2pa!</span>(pp0, <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span>u32, <span class="kw">unsafe </span>{
-        core::ptr::read(boot_pgdir) &amp; !<span class="number">0xFFF
-    </span>});
+    <span class="macro">assert_eq!</span>(
+        <span class="macro">crate::page2pa!</span>(pp0, <span class="kw">unsafe</span>{PAGES}; PageNode) <span class="kw">as </span>u32,
+        <span class="kw">unsafe </span>{ core::ptr::read(boot_pgdir) &amp; !<span class="number">0xFFF </span>}
+    );
 
     <span class="macro">assert_eq!</span>(PTE_C_CACHEABLE | PTE_V, <span class="kw">unsafe </span>{
-        core::ptr::read(<span class="macro">crate::page2kva!</span>(pp0, <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u32) &amp; <span class="number">0xFFF
+        core::ptr::read(<span class="macro">crate::page2kva!</span>(pp0, PAGES; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u32) &amp; <span class="number">0xFFF
     </span>});
 
     <span class="macro">crate::println!</span>(<span class="string">"Empty page_free_list test over."</span>);
 
-    <span class="kw">let </span>temp = <span class="macro">crate::page2kva!</span>(pp2, <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u32;
+    <span class="kw">let </span>temp = <span class="macro">crate::page2kva!</span>(pp2, <span class="kw">unsafe</span>{PAGES}; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u32;
     <span class="kw">unsafe </span>{
         <span class="kw-2">*</span>temp = <span class="number">1000</span>;
     }
-    page_free(page_free_list, <span class="kw-2">&amp;mut </span>pp2);
+    <span class="kw">unsafe </span>{ PAGE_FREE_LIST = zfl };
+    page_free(<span class="kw-2">&amp;mut </span>pp2);
     <span class="macro">assert_eq!</span>(<span class="number">1000</span>, <span class="kw">unsafe </span>{ <span class="kw-2">*</span>temp });
 
-    pp0 = page_alloc(page_free_list, pages).unwrap();
+    pp0 = page_alloc().unwrap();
     <span class="macro">assert!</span>(!pp0.is_null());
 
-    <span class="kw">let </span>temp2 = <span class="macro">crate::page2kva!</span>(pp2, <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u32;
+    <span class="kw">let </span>temp2 = <span class="macro">crate::page2kva!</span>(pp2, <span class="kw">unsafe</span>{PAGES}; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u32;
     <span class="macro">assert_eq!</span>(temp, temp2);
     <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="kw">unsafe </span>{ <span class="kw-2">*</span>temp2 });
 
@@ -448,34 +449,29 @@
 }
 
 <span class="attr">#[cfg(ktest_item = <span class="string">"memory"</span>)]
-</span><span class="kw">pub fn </span>test_page_strong(
-    page_free_list: <span class="kw-2">&amp;mut </span><span class="kw">crate</span>::kern::pmap::PageList,
-    pages: <span class="kw-2">&amp;mut *mut </span><span class="kw">crate</span>::kern::pmap::PageNode,
-) {
+</span><span class="kw">pub fn </span>test_page_strong() {
     <span class="kw">use crate</span>::{
         kdef::{
             error::KError,
             mmu::{PAGE_SIZE, PDMAP},
         },
-        kern::{
-            pmap::{
-                page_alloc, page_free, page_insert, page_remove, PageList, PageNode, Pde, CUR_PGDIR,
-            },
-            tlbex::tlb_init_global_vars,
+        kern::pmap::{
+            page_alloc, page_free, page_insert, page_remove, PageList, PageNode, Pde, CUR_PGDIR,
+            PAGES, PAGE_FREE_LIST,
         },
         pa2page, page2kva, page2pa, println, va2pa, PADDR, PTE_ADDR,
     };
     <span class="kw">use </span>core::ptr;
 
-    <span class="kw">let </span>pp = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span>boot_pgdir = <span class="macro">page2kva!</span>(pp, <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>Pde;
+    <span class="kw">let </span>pp = page_alloc().unwrap();
+    <span class="kw">let </span>boot_pgdir = <span class="macro">page2kva!</span>(pp, <span class="kw">unsafe</span>{PAGES}; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>Pde;
     <span class="kw">unsafe </span>{ CUR_PGDIR = boot_pgdir };
 
-    <span class="kw">let </span><span class="kw-2">mut </span>pp0 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>pp1 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>pp2 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>pp3 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>pp4 = page_alloc(page_free_list, pages).unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp0 = page_alloc().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp1 = page_alloc().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp2 = page_alloc().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp3 = page_alloc().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp4 = page_alloc().unwrap();
 
     <span class="macro">assert!</span>(!pp0.is_null());
     <span class="macro">assert!</span>(!pp1.is_null() &amp;&amp; pp1 != pp0);
@@ -483,40 +479,43 @@
     <span class="macro">assert!</span>(!pp3.is_null() &amp;&amp; pp3 != pp0 &amp;&amp; pp3 != pp2 &amp;&amp; pp3 != pp1);
     <span class="macro">assert!</span>(!pp4.is_null() &amp;&amp; pp4 != pp0 &amp;&amp; pp4 != pp3 &amp;&amp; pp4 != pp2 &amp;&amp; pp4 != pp1);
 
-    <span class="kw">let </span><span class="kw-2">mut </span>zfl = PageList::new();
-    tlb_init_global_vars(<span class="kw-2">&amp;mut </span>zfl, pages);
+    <span class="kw">let </span>zfl;
+    <span class="kw">unsafe </span>{
+        zfl = PAGE_FREE_LIST;
+        PAGE_FREE_LIST = PageList::new();
+    }
 
-    <span class="kw">unsafe </span>{ <span class="macro">assert!</span>(page_insert(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1, <span class="kw-2">&amp;mut </span>zfl, pages).is_err()) };
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(KError::NoMem) = page_alloc(<span class="kw-2">&amp;mut </span>zfl, pages) {
+    <span class="kw">unsafe </span>{ <span class="macro">assert!</span>(page_insert(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1).is_err()) };
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(KError::NoMem) = page_alloc() {
     } <span class="kw">else </span>{
         <span class="macro">unreachable!</span>()
     }
 
-    page_free(<span class="kw-2">&amp;mut </span>zfl, <span class="kw-2">&amp;mut </span>pp0);
+    page_free(<span class="kw-2">&amp;mut </span>pp0);
     <span class="kw">unsafe </span>{
-        <span class="macro">assert!</span>(page_insert(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1, <span class="kw-2">&amp;mut </span>zfl, pages).is_ok());
-        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE, <span class="number">0</span>, <span class="number">0</span>, pp2, <span class="kw-2">&amp;mut </span>zfl, pages).is_ok());
-        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE * <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, pp3, <span class="kw-2">&amp;mut </span>zfl, pages).is_ok());
+        <span class="macro">assert!</span>(page_insert(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1).is_ok());
+        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE, <span class="number">0</span>, <span class="number">0</span>, pp2).is_ok());
+        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE * <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, pp3).is_ok());
         <span class="macro">assert_eq!</span>(
-            <span class="macro">page2pa!</span>(pp0, <span class="kw-2">*</span>pages; PageNode),
+            <span class="macro">page2pa!</span>(pp0, PAGES; PageNode),
             <span class="macro">PTE_ADDR!</span>((<span class="kw-2">*</span>boot_pgdir) <span class="kw">as </span>usize)
         );
 
         <span class="macro">println!</span>(<span class="string">"va2pa(boot_pgdir, 0x0) is 0x{:x}."</span>, <span class="macro">va2pa!</span>(boot_pgdir, <span class="number">0x0</span>));
-        <span class="macro">println!</span>(<span class="string">"page2pa(pp1) is 0x{:x}."</span>, <span class="macro">page2pa!</span>(pp1, <span class="kw-2">*</span>pages; PageNode));
+        <span class="macro">println!</span>(<span class="string">"page2pa(pp1) is 0x{:x}."</span>, <span class="macro">page2pa!</span>(pp1, PAGES; PageNode));
     }
 
     <span class="kw">unsafe </span>{
-        <span class="macro">assert_eq!</span>(<span class="macro">va2pa!</span>(boot_pgdir, <span class="number">0x0</span>), <span class="macro">page2pa!</span>(pp1, <span class="kw-2">*</span>pages; PageNode));
+        <span class="macro">assert_eq!</span>(<span class="macro">va2pa!</span>(boot_pgdir, <span class="number">0x0</span>), <span class="macro">page2pa!</span>(pp1, PAGES; PageNode));
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp1).data.pp_ref, <span class="number">1</span>);
         <span class="macro">assert_eq!</span>(
             <span class="macro">va2pa!</span>(boot_pgdir, PAGE_SIZE),
-            <span class="macro">page2pa!</span>(pp2, <span class="kw-2">*</span>pages; PageNode)
+            <span class="macro">page2pa!</span>(pp2, PAGES; PageNode)
         );
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp2).data.pp_ref, <span class="number">1</span>);
         <span class="macro">assert_eq!</span>(
             <span class="macro">va2pa!</span>(boot_pgdir, PAGE_SIZE * <span class="number">2</span>),
-            <span class="macro">page2pa!</span>(pp3, <span class="kw-2">*</span>pages; PageNode)
+            <span class="macro">page2pa!</span>(pp3, PAGES; PageNode)
         );
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp3).data.pp_ref, <span class="number">1</span>);
     }
@@ -524,53 +523,53 @@
     <span class="macro">println!</span>(<span class="string">"Start Page Insert."</span>);
 
     <span class="kw">unsafe </span>{
-        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE, <span class="number">0</span>, <span class="number">0</span>, pp2, <span class="kw-2">&amp;mut </span>zfl, pages).is_ok());
+        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE, <span class="number">0</span>, <span class="number">0</span>, pp2).is_ok());
         <span class="macro">assert_eq!</span>(
             <span class="macro">va2pa!</span>(boot_pgdir, PAGE_SIZE),
-            <span class="macro">page2pa!</span>(pp2, <span class="kw-2">*</span>pages; PageNode)
+            <span class="macro">page2pa!</span>(pp2, PAGES; PageNode)
         );
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp2).data.pp_ref, <span class="number">1</span>);
     }
 
     <span class="kw">unsafe </span>{
-        <span class="macro">assert!</span>(page_insert(boot_pgdir, PDMAP, <span class="number">0</span>, <span class="number">0</span>, pp0, <span class="kw-2">&amp;mut </span>zfl, pages).is_err());
-        page_remove(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>, <span class="kw-2">&amp;mut </span>zfl, pages);
+        <span class="macro">assert!</span>(page_insert(boot_pgdir, PDMAP, <span class="number">0</span>, <span class="number">0</span>, pp0).is_err());
+        page_remove(boot_pgdir, <span class="number">0</span>, <span class="number">0</span>);
         <span class="macro">assert_eq!</span>(!<span class="number">0</span>, <span class="macro">va2pa!</span>(boot_pgdir, <span class="number">0x0</span>));
-        <span class="macro">assert!</span>(page_insert(boot_pgdir, PDMAP, <span class="number">0</span>, <span class="number">0</span>, pp0, <span class="kw-2">&amp;mut </span>zfl, pages).is_ok());
+        <span class="macro">assert!</span>(page_insert(boot_pgdir, PDMAP, <span class="number">0</span>, <span class="number">0</span>, pp0).is_ok());
     }
 
     <span class="kw">unsafe </span>{
-        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE * <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, pp2, <span class="kw-2">&amp;mut </span>zfl, pages).is_ok());
+        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE * <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, pp2).is_ok());
         <span class="macro">assert_eq!</span>(
             <span class="macro">va2pa!</span>(boot_pgdir, PAGE_SIZE),
-            <span class="macro">page2pa!</span>(pp2, <span class="kw-2">*</span>pages; PageNode)
+            <span class="macro">page2pa!</span>(pp2, PAGES; PageNode)
         );
         <span class="macro">assert_eq!</span>(
             <span class="macro">va2pa!</span>(boot_pgdir, PAGE_SIZE * <span class="number">2</span>),
-            <span class="macro">page2pa!</span>(pp2, <span class="kw-2">*</span>pages; PageNode)
+            <span class="macro">page2pa!</span>(pp2, PAGES; PageNode)
         );
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp2).data.pp_ref, <span class="number">2</span>);
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp3).data.pp_ref, <span class="number">0</span>);
 
-        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE + PDMAP, <span class="number">0</span>, <span class="number">0</span>, pp2, <span class="kw-2">&amp;mut </span>zfl, pages).is_ok());
+        <span class="macro">assert!</span>(page_insert(boot_pgdir, PAGE_SIZE + PDMAP, <span class="number">0</span>, <span class="number">0</span>, pp2).is_ok());
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp2).data.pp_ref, <span class="number">3</span>);
     }
 
     <span class="macro">println!</span>(<span class="string">"Page Insert test over."</span>);
 
-    <span class="kw">let </span>pp = page_alloc(<span class="kw-2">&amp;mut </span>zfl, pages).unwrap();
+    <span class="kw">let </span>pp = page_alloc().unwrap();
     <span class="macro">assert_eq!</span>(pp, pp3);
-    page_remove(boot_pgdir, PAGE_SIZE, <span class="number">0</span>, <span class="kw-2">&amp;mut </span>zfl, pages);
+    page_remove(boot_pgdir, PAGE_SIZE, <span class="number">0</span>);
     <span class="kw">unsafe </span>{
         <span class="macro">assert_eq!</span>(
             <span class="macro">va2pa!</span>(boot_pgdir, PAGE_SIZE * <span class="number">2</span>),
-            <span class="macro">page2pa!</span>(pp2, <span class="kw-2">*</span>pages; PageNode)
+            <span class="macro">page2pa!</span>(pp2, PAGES; PageNode)
         );
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp2).data.pp_ref, <span class="number">2</span>);
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp3).data.pp_ref, <span class="number">0</span>);
     }
 
-    page_remove(boot_pgdir, PAGE_SIZE * <span class="number">2</span>, <span class="number">0</span>, <span class="kw-2">&amp;mut </span>zfl, pages);
+    page_remove(boot_pgdir, PAGE_SIZE * <span class="number">2</span>, <span class="number">0</span>);
     <span class="kw">unsafe </span>{
         <span class="macro">assert_eq!</span>(<span class="macro">va2pa!</span>(boot_pgdir, <span class="number">0x0</span>), !<span class="number">0</span>);
         <span class="macro">assert_eq!</span>(<span class="macro">va2pa!</span>(boot_pgdir, PAGE_SIZE), !<span class="number">0</span>);
@@ -579,7 +578,7 @@
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp3).data.pp_ref, <span class="number">0</span>);
     }
 
-    page_remove(boot_pgdir, PAGE_SIZE + PDMAP, <span class="number">0</span>, <span class="kw-2">&amp;mut </span>zfl, pages);
+    page_remove(boot_pgdir, PAGE_SIZE + PDMAP, <span class="number">0</span>);
     <span class="kw">unsafe </span>{
         <span class="macro">assert_eq!</span>(<span class="macro">va2pa!</span>(boot_pgdir, <span class="number">0x0</span>), !<span class="number">0</span>);
         <span class="macro">assert_eq!</span>(<span class="macro">va2pa!</span>(boot_pgdir, PAGE_SIZE), !<span class="number">0</span>);
@@ -588,17 +587,17 @@
         <span class="macro">assert_eq!</span>((<span class="kw-2">*</span>pp2).data.pp_ref, <span class="number">0</span>);
     }
 
-    <span class="kw">let </span>pp = page_alloc(<span class="kw-2">&amp;mut </span>zfl, pages).unwrap();
+    <span class="kw">let </span>pp = page_alloc().unwrap();
     <span class="macro">assert_eq!</span>(pp, pp2);
 
-    <span class="macro">assert!</span>(page_alloc(<span class="kw-2">&amp;mut </span>zfl, pages).is_err());
+    <span class="macro">assert!</span>(page_alloc().is_err());
     <span class="kw">unsafe </span>{
         <span class="macro">assert_eq!</span>(
-            <span class="macro">page2pa!</span>(pp0, <span class="kw-2">*</span>pages; PageNode),
+            <span class="macro">page2pa!</span>(pp0, PAGES; PageNode),
             <span class="macro">PTE_ADDR!</span>(<span class="kw-2">*</span>boot_pgdir <span class="kw">as </span>usize)
         );
         <span class="macro">assert_eq!</span>(
-            <span class="macro">page2pa!</span>(pp1, <span class="kw-2">*</span>pages; PageNode),
+            <span class="macro">page2pa!</span>(pp1, PAGES; PageNode),
             <span class="macro">PTE_ADDR!</span>((<span class="kw-2">*</span>(boot_pgdir <span class="kw">as </span><span class="kw-2">*mut </span>[u32; <span class="number">2</span>]))[<span class="number">1</span>] <span class="kw">as </span>usize)
         );
     }
@@ -611,59 +610,52 @@
         (<span class="kw-2">*</span>pp1).data.pp_ref = <span class="number">0</span>;
     }
 
-    tlb_init_global_vars(page_free_list, pages);
-    page_free(page_free_list, <span class="kw-2">&amp;mut </span>pp0);
-    page_free(page_free_list, <span class="kw-2">&amp;mut </span>pp1);
-    page_free(page_free_list, <span class="kw-2">&amp;mut </span>pp2);
-    page_free(page_free_list, <span class="kw-2">&amp;mut </span>pp3);
-    page_free(page_free_list, <span class="kw-2">&amp;mut </span>pp4);
-    page_free(
-        page_free_list,
-        <span class="kw-2">&amp;mut </span>(<span class="macro">pa2page!</span>(<span class="macro">PADDR!</span>(boot_pgdir <span class="kw">as </span>usize), <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>PageNode),
-    );
+    <span class="kw">unsafe </span>{ PAGE_FREE_LIST = zfl };
+    page_free(<span class="kw-2">&amp;mut </span>pp0);
+    page_free(<span class="kw-2">&amp;mut </span>pp1);
+    page_free(<span class="kw-2">&amp;mut </span>pp2);
+    page_free(<span class="kw-2">&amp;mut </span>pp3);
+    page_free(<span class="kw-2">&amp;mut </span>pp4);
+    <span class="kw">unsafe </span>{
+        page_free(<span class="kw-2">&amp;mut </span>(<span class="macro">pa2page!</span>(<span class="macro">PADDR!</span>(boot_pgdir <span class="kw">as </span>usize), PAGES; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>PageNode));
+    }
 }
 
 <span class="attr">#[cfg(ktest_item = <span class="string">"memory"</span>)]
-</span><span class="kw">pub fn </span>test_tlb_refill(
-    page_free_list: <span class="kw-2">&amp;mut </span><span class="kw">crate</span>::kern::pmap::PageList,
-    pages: <span class="kw-2">&amp;mut *mut </span><span class="kw">crate</span>::kern::pmap::PageNode,
-) {
+</span><span class="kw">pub fn </span>test_tlb_refill() {
     <span class="kw">use crate</span>::{
         kdef::mmu::PAGE_SIZE,
         kern::{
             pmap::{
-                page_alloc, page_free, page_insert, page_lookup, PageList, PageNode, Pde, CUR_PGDIR,
+                page_alloc, page_free, page_insert, page_lookup, PageNode, Pde, CUR_PGDIR, PAGES,
             },
-            tlbex::{_do_tlb_refill, tlb_init_global_vars},
+            tlbex::_do_tlb_refill,
         },
         page2kva, page2pa, println, va2pa,
     };
     <span class="kw">use </span>core::arch::asm;
 
-    <span class="kw">let </span>pp0 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span>boot_pddir = <span class="macro">page2kva!</span>(pp0, <span class="kw-2">*</span>pages; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>Pde;
+    <span class="kw">let </span>pp0 = page_alloc().unwrap();
+    <span class="kw">let </span>boot_pddir = <span class="macro">page2kva!</span>(pp0, <span class="kw">unsafe</span>{PAGES}; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>Pde;
     <span class="kw">unsafe </span>{ CUR_PGDIR = boot_pddir };
 
-    <span class="kw">let </span><span class="kw-2">mut </span>pp0 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span>pp1 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span>pp2 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>pp3 = page_alloc(page_free_list, pages).unwrap();
-    <span class="kw">let </span><span class="kw-2">mut </span>pp4 = page_alloc(page_free_list, pages).unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp0 = page_alloc().unwrap();
+    <span class="kw">let </span>pp1 = page_alloc().unwrap();
+    <span class="kw">let </span>pp2 = page_alloc().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp3 = page_alloc().unwrap();
+    <span class="kw">let </span><span class="kw-2">mut </span>pp4 = page_alloc().unwrap();
 
-    <span class="kw">let </span><span class="kw-2">mut </span>fl = PageList::new();
-    tlb_init_global_vars(<span class="kw-2">&amp;mut </span>fl, pages);
-
-    page_free(<span class="kw-2">&amp;mut </span>fl, <span class="kw-2">&amp;mut </span>pp0);
+    page_free(<span class="kw-2">&amp;mut </span>pp0);
     <span class="kw">unsafe </span>{
-        page_insert(boot_pddir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1, <span class="kw-2">&amp;mut </span>fl, pages).unwrap();
-        page_insert(boot_pddir, PAGE_SIZE, <span class="number">0</span>, <span class="number">0</span>, pp2, <span class="kw-2">&amp;mut </span>fl, pages).unwrap();
+        page_insert(boot_pddir, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, pp1).unwrap();
+        page_insert(boot_pddir, PAGE_SIZE, <span class="number">0</span>, <span class="number">0</span>, pp2).unwrap();
     }
 
     <span class="macro">println!</span>(<span class="string">"TLB-Refill check begin."</span>);
 
     <span class="kw">let </span>entrys: <span class="kw-2">&amp;mut </span>[u32; <span class="number">2</span>] = <span class="kw-2">&amp;mut </span>[<span class="number">0</span>; <span class="number">2</span>];
     _do_tlb_refill(entrys, PAGE_SIZE, <span class="number">0</span>);
-    <span class="kw">let </span>(<span class="kw">_</span>, walk_pte) = page_lookup(boot_pddir, PAGE_SIZE, <span class="kw-2">&amp;mut </span>fl, pages).unwrap();
+    <span class="kw">let </span>(<span class="kw">_</span>, walk_pte) = page_lookup(boot_pddir, PAGE_SIZE).unwrap();
 
     <span class="kw">unsafe </span>{
         <span class="macro">println!</span>(<span class="string">"  entrys: {}, {}"</span>, entrys[<span class="number">0</span>], entrys[<span class="number">1</span>]);
@@ -671,23 +663,23 @@
         <span class="macro">println!</span>(<span class="string">"  Right Arm: {}"</span>, entrys[<span class="number">1</span>] == (<span class="kw-2">*</span>walk_pte &gt;&gt; <span class="number">6</span>));
         <span class="macro">assert!</span>((entrys[<span class="number">0</span>] == (<span class="kw-2">*</span>walk_pte &gt;&gt; <span class="number">6</span>)) ^ (entrys[<span class="number">1</span>] == (<span class="kw-2">*</span>walk_pte &gt;&gt; <span class="number">6</span>)));
         <span class="macro">assert_eq!</span>(
-            <span class="macro">page2pa!</span>(pp2, <span class="kw-2">*</span>pages; PageNode),
+            <span class="macro">page2pa!</span>(pp2, PAGES; PageNode),
             <span class="macro">va2pa!</span>(boot_pddir, PAGE_SIZE)
         );
     };
 
     <span class="macro">println!</span>(<span class="string">"Test #1 Passed."</span>);
 
-    page_free(<span class="kw-2">&amp;mut </span>fl, <span class="kw-2">&amp;mut </span>pp4);
-    page_free(<span class="kw-2">&amp;mut </span>fl, <span class="kw-2">&amp;mut </span>pp3);
+    page_free(<span class="kw-2">&amp;mut </span>pp4);
+    page_free(<span class="kw-2">&amp;mut </span>pp3);
 
-    <span class="macro">assert!</span>(page_lookup(boot_pddir, <span class="number">0x00400000</span>, <span class="kw-2">&amp;mut </span>fl, pages).is_none());
+    <span class="macro">assert!</span>(page_lookup(boot_pddir, <span class="number">0x00400000</span>,).is_none());
     _do_tlb_refill(entrys, <span class="number">0x00400000</span>, <span class="number">0</span>);
-    <span class="kw">let </span>(pp, <span class="kw">_</span>) = page_lookup(boot_pddir, <span class="number">0x00400000</span>, <span class="kw-2">&amp;mut </span>fl, pages).unwrap();
+    <span class="kw">let </span>(pp, <span class="kw">_</span>) = page_lookup(boot_pddir, <span class="number">0x00400000</span>).unwrap();
     <span class="macro">assert!</span>(!pp.is_null());
     <span class="kw">unsafe </span>{
         <span class="macro">assert_eq!</span>(
-            <span class="macro">page2pa!</span>(pp3, <span class="kw-2">*</span>pages; PageNode),
+            <span class="macro">page2pa!</span>(pp3, PAGES; PageNode),
             <span class="macro">va2pa!</span>(boot_pddir, <span class="number">0x00400000</span>)
         );
     }
