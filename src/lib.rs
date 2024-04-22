@@ -1,3 +1,4 @@
+#![feature(asm_experimental_arch)]
 #![no_std]
 #![no_main]
 
