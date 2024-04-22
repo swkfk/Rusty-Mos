@@ -23,7 +23,7 @@ pub type Pte = u32;
 
 #[derive(Clone, Copy)]
 pub struct PageData {
-    pp_ref: u16,
+    pub pp_ref: u16,
 }
 
 pub fn mips_detect_memory(npage: &mut usize, memsize: usize) {
@@ -119,7 +119,7 @@ pub fn page_free(page_free_list: &mut PageList, page: &mut *mut PageNode) {
 
 pub fn page_decref(page_free_list: &mut PageList, page: &mut *mut PageNode) {
     assert!(unsafe { **page }.data.pp_ref > 0);
-    unsafe { **page }.data.pp_ref -= 1;
+    unsafe { (**page).data.pp_ref -= 1 };
     if unsafe { **page }.data.pp_ref == 0 {
         page_free(page_free_list, page);
     }
@@ -167,14 +167,15 @@ pub unsafe fn page_insert(
 ) -> Result<(), KError> {
     if let Ok(pte) = pgdir_walk(pgdir, va, false, page_free_list, pages) {
         if !pte.is_null() && unsafe { *pte & PTE_V } != 0 {
-            if pp as usize == pa2page!(unsafe { *pte }, *pages; PageNode) {
+            if pp as usize != pa2page!(unsafe { *pte }, *pages; PageNode) {
                 page_remove(pgdir, va, asid, page_free_list, pages);
             } else {
                 tlb_invalidate(asid, va);
                 ptr::write(
                     pte,
                     page2pa!(pp, *pages; PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
-                )
+                );
+                return Ok(());
             }
         }
     }
