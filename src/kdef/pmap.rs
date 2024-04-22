@@ -34,7 +34,7 @@ macro_rules! pa2page {
     ($pa:expr, $pages:expr; $t:ty) => {{
         let ppn = $crate::PPN!($pa) as usize;
         // assert!(ppn >= npage);
-        $pages as usize + ppn * size_of::<$t>()
+        $pages as usize + ppn * core::mem::size_of::<$t>()
     }};
 }
 
