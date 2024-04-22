@@ -13,6 +13,8 @@ use crate::{
 use super::tlbex::tlb_invalidate;
 
 pub static mut CUR_PGDIR: *mut Pde = ptr::null_mut();
+pub static mut PAGES: *mut PageNode = core::ptr::null_mut();
+pub static mut PAGE_FREE_LIST: PageList = PageList::new();
 
 const PAGE_SIZE: usize = 4096;
 
@@ -66,81 +68,71 @@ fn alloc(
     alloced_mem as *mut PageNode
 }
 
-pub fn mips_vm_init(pages: &mut *mut PageNode, freemem: &mut usize, npage: usize, memsize: usize) {
-    *pages = alloc(
-        freemem,
-        memsize,
-        npage * size_of::<PageNode>(),
-        PAGE_SIZE,
-        true,
-    );
+pub fn mips_vm_init(freemem: &mut usize, npage: usize, memsize: usize) {
+    unsafe {
+        PAGES = alloc(
+            freemem,
+            memsize,
+            npage * size_of::<PageNode>(),
+            PAGE_SIZE,
+            true,
+        );
+    }
     println!("Pages are to the memeory 0x{:x}", freemem);
     debugln!("> pmap.rs: mips vm init success");
 }
 
-pub fn page_init(pages: &mut *mut PageNode, freemem: &mut usize, npage: usize) -> PageList {
-    let mut page_free_list = PageList::new();
+pub fn page_init(freemem: &mut usize, npage: usize) {
+    let pages = unsafe { PAGES };
 
     *freemem = ROUND!(*freemem; PAGE_SIZE);
 
     let mut page_id = 0;
     while page_id < npage && page_id << PGSHIFT < PADDR!(*freemem) {
-        unsafe { ((*ARRAY_PTR!(*pages; page_id, PageNode)).data).pp_ref = 1 };
+        unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 1 };
         page_id += 1;
     }
 
     while page_id < npage {
-        unsafe { ((*ARRAY_PTR!(*pages; page_id, PageNode)).data).pp_ref = 0 };
-        unsafe { page_free_list.insert_head(ARRAY_PTR!(*pages; page_id, PageNode)) };
+        unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 0 };
+        unsafe { PAGE_FREE_LIST.insert_head(ARRAY_PTR!(pages; page_id, PageNode)) };
         page_id += 1;
     }
-
-    page_free_list
 }
 
-pub fn page_alloc(
-    page_free_list: &mut PageList,
-    pages: &*mut PageNode,
-    // npage: usize,
-) -> Result<*mut PageNode, KError> {
-    match unsafe { page_free_list.pop_head() } {
+pub fn page_alloc() -> Result<*mut PageNode, KError> {
+    match unsafe { PAGE_FREE_LIST.pop_head() } {
         None => Err(KError::NoMem),
         Some(pp) => unsafe {
-            ptr::write_bytes(page2kva!(pp, *pages; PageNode) as *mut u8, 0, PAGE_SIZE);
+            ptr::write_bytes(page2kva!(pp, PAGES; PageNode) as *mut u8, 0, PAGE_SIZE);
             Ok(pp)
         },
     }
 }
 
-pub fn page_free(page_free_list: &mut PageList, page: &mut *mut PageNode) {
+pub fn page_free(page: &mut *mut PageNode) {
     assert_eq!(0, unsafe { **page }.data.pp_ref);
-    unsafe { page_free_list.insert_head(*page) };
+    unsafe { PAGE_FREE_LIST.insert_head(*page) };
 }
 
-pub fn page_decref(page_free_list: &mut PageList, page: &mut *mut PageNode) {
+pub fn page_decref(page: &mut *mut PageNode) {
     assert!(unsafe { **page }.data.pp_ref > 0);
     unsafe { (**page).data.pp_ref -= 1 };
     if unsafe { **page }.data.pp_ref == 0 {
-        page_free(page_free_list, page);
+        page_free(page);
     }
 }
 
-pub fn pgdir_walk(
-    pgdir: *mut Pde,
-    va: usize,
-    create: bool,
-    page_free_list: &mut PageList,
-    pages: &*mut PageNode,
-) -> Result<*mut Pte, KError> {
+pub fn pgdir_walk(pgdir: *mut Pde, va: usize, create: bool) -> Result<*mut Pte, KError> {
     let pgdir_entryp = (pgdir as u32 + (PDX!(va) * size_of::<Pde>()) as u32) as *mut Pte;
     if 0 == PTE_V & unsafe { *(pgdir_entryp as *const Pte) } {
         // Not Valid!
         if create {
-            let pp = page_alloc(page_free_list, pages)?;
+            let pp = page_alloc()?;
             unsafe {
                 ptr::write(
                     pgdir_entryp,
-                    (PTE_ADDR!(page2pa!(pp, *pages; PageNode)) as Pte | PTE_C_CACHEABLE | PTE_V),
+                    (PTE_ADDR!(page2pa!(pp, PAGES; PageNode)) as Pte | PTE_C_CACHEABLE | PTE_V),
                 );
                 (*pp).data.pp_ref = 1;
             }
@@ -162,18 +154,16 @@ pub unsafe fn page_insert(
     asid: u32,
     perm: u32,
     pp: *mut PageNode,
-    page_free_list: &mut PageList,
-    pages: &*mut PageNode,
 ) -> Result<(), KError> {
-    if let Ok(pte) = pgdir_walk(pgdir, va, false, page_free_list, pages) {
+    if let Ok(pte) = pgdir_walk(pgdir, va, false) {
         if !pte.is_null() && unsafe { *pte & PTE_V } != 0 {
-            if pp as usize != pa2page!(unsafe { *pte }, *pages; PageNode) {
-                page_remove(pgdir, va, asid, page_free_list, pages);
+            if pp as usize != pa2page!(unsafe { *pte }, PAGES; PageNode) {
+                page_remove(pgdir, va, asid);
             } else {
                 tlb_invalidate(asid, va);
                 ptr::write(
                     pte,
-                    page2pa!(pp, *pages; PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
+                    page2pa!(pp, PAGES; PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
                 );
                 return Ok(());
             }
@@ -181,27 +171,22 @@ pub unsafe fn page_insert(
     }
 
     tlb_invalidate(asid, va);
-    let pte = pgdir_walk(pgdir, va, true, page_free_list, pages)?;
+    let pte = pgdir_walk(pgdir, va, true)?;
     ptr::write(
         pte,
-        page2pa!(pp, *pages; PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
+        page2pa!(pp, PAGES; PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
     );
     (*pp).data.pp_ref += 1;
 
     Ok(())
 }
 
-pub fn page_lookup(
-    pgdir: *mut Pde,
-    va: usize,
-    page_free_list: &mut PageList,
-    pages: &*mut PageNode,
-) -> Option<(*mut PageNode, *mut Pte)> {
-    if let Ok(pte) = pgdir_walk(pgdir, va, false, page_free_list, pages) {
+pub fn page_lookup(pgdir: *mut Pde, va: usize) -> Option<(*mut PageNode, *mut Pte)> {
+    if let Ok(pte) = pgdir_walk(pgdir, va, false) {
         if pte.is_null() || unsafe { *pte & PTE_V == 0 } {
             None
         } else {
-            let pp = pa2page!(unsafe { *pte }, *pages; PageNode) as *mut PageNode;
+            let pp = unsafe { pa2page!( *pte , PAGES; PageNode) as *mut PageNode };
             Some((pp, pte))
         }
     } else {
@@ -209,15 +194,9 @@ pub fn page_lookup(
     }
 }
 
-pub fn page_remove(
-    pgdir: *mut Pde,
-    va: usize,
-    asid: u32,
-    page_free_list: &mut PageList,
-    pages: &*mut PageNode,
-) {
-    if let Some((mut pp, pte)) = page_lookup(pgdir, va, page_free_list, pages) {
-        page_decref(page_free_list, &mut pp);
+pub fn page_remove(pgdir: *mut Pde, va: usize, asid: u32) {
+    if let Some((mut pp, pte)) = page_lookup(pgdir, va) {
+        page_decref(&mut pp);
         unsafe { ptr::write(pte, 0) };
         tlb_invalidate(asid, va);
     }

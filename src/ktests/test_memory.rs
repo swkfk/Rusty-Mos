@@ -1,18 +1,17 @@
 #[cfg(ktest_item = "memory")]
-pub fn test_page(
-    page_free_list: &mut crate::kern::pmap::PageList,
-    pages: &mut *mut crate::kern::pmap::PageNode,
-) {
+pub fn test_page() {
     use crate::kdef::mmu::{PTE_C_CACHEABLE, PTE_V};
-    use crate::kern::pmap::{page_alloc, page_free, page_insert, PageList, PageNode};
-    use crate::{kern::pmap::Pde, page2kva};
+    use crate::kern::pmap::{
+        page_alloc, page_free, page_insert, PageList, PageNode, Pde, PAGES, PAGE_FREE_LIST,
+    };
+    use crate::page2kva;
 
-    let pp = page_alloc(page_free_list, pages).unwrap();
-    let boot_pgdir = page2kva!(pp, *pages; PageNode) as *mut Pde;
+    let pp = page_alloc().unwrap();
+    let boot_pgdir = page2kva!(pp, unsafe{PAGES}; PageNode) as *mut Pde;
 
-    let mut pp0 = page_alloc(page_free_list, pages).unwrap();
-    let pp1 = page_alloc(page_free_list, pages).unwrap();
-    let mut pp2 = page_alloc(page_free_list, pages).unwrap();
+    let mut pp0 = page_alloc().unwrap();
+    let pp1 = page_alloc().unwrap();
+    let mut pp2 = page_alloc().unwrap();
     assert!(!pp0.is_null());
     assert!(!pp1.is_null() && pp1 != pp0);
     assert!(!pp2.is_null() && pp2 != pp0);
@@ -22,37 +21,43 @@ pub fn test_page(
         boot_pgdir as usize
     );
 
-    let mut zfl = PageList::new();
-    assert!(page_alloc(&mut zfl, pages).is_err());
-    assert!(unsafe { page_insert(boot_pgdir, 0, 0, 0, pp1, &mut zfl, pages).is_err() });
-    page_free(&mut zfl, &mut pp0);
-    assert!(unsafe { page_insert(boot_pgdir, 0, 0, 0, pp1, &mut zfl, pages).is_ok() });
+    let zfl;
+    unsafe {
+        zfl = PAGE_FREE_LIST;
+        PAGE_FREE_LIST = PageList::new();
+    }
+    assert!(page_alloc().is_err());
+    assert!(unsafe { page_insert(boot_pgdir, 0, 0, 0, pp1).is_err() });
+    page_free(&mut pp0);
+    assert!(unsafe { page_insert(boot_pgdir, 0, 0, 0, pp1).is_ok() });
 
     assert_eq!(PTE_C_CACHEABLE | PTE_V, unsafe {
         core::ptr::read(boot_pgdir) & 0xFFF
     });
 
-    assert_eq!(crate::page2pa!(pp0, *pages; PageNode) as u32, unsafe {
-        core::ptr::read(boot_pgdir) & !0xFFF
-    });
+    assert_eq!(
+        crate::page2pa!(pp0, unsafe{PAGES}; PageNode) as u32,
+        unsafe { core::ptr::read(boot_pgdir) & !0xFFF }
+    );
 
     assert_eq!(PTE_C_CACHEABLE | PTE_V, unsafe {
-        core::ptr::read(crate::page2kva!(pp0, *pages; PageNode) as *mut u32) & 0xFFF
+        core::ptr::read(crate::page2kva!(pp0, PAGES; PageNode) as *mut u32) & 0xFFF
     });
 
     crate::println!("Empty page_free_list test over.");
 
-    let temp = crate::page2kva!(pp2, *pages; PageNode) as *mut u32;
+    let temp = crate::page2kva!(pp2, unsafe{PAGES}; PageNode) as *mut u32;
     unsafe {
         *temp = 1000;
     }
-    page_free(page_free_list, &mut pp2);
+    unsafe { PAGE_FREE_LIST = zfl };
+    page_free(&mut pp2);
     assert_eq!(1000, unsafe { *temp });
 
-    pp0 = page_alloc(page_free_list, pages).unwrap();
+    pp0 = page_alloc().unwrap();
     assert!(!pp0.is_null());
 
-    let temp2 = crate::page2kva!(pp2, *pages; PageNode) as *mut u32;
+    let temp2 = crate::page2kva!(pp2, unsafe{PAGES}; PageNode) as *mut u32;
     assert_eq!(temp, temp2);
     assert_eq!(0, unsafe { *temp2 });
 
@@ -60,34 +65,29 @@ pub fn test_page(
 }
 
 #[cfg(ktest_item = "memory")]
-pub fn test_page_strong(
-    page_free_list: &mut crate::kern::pmap::PageList,
-    pages: &mut *mut crate::kern::pmap::PageNode,
-) {
+pub fn test_page_strong() {
     use crate::{
         kdef::{
             error::KError,
             mmu::{PAGE_SIZE, PDMAP},
         },
-        kern::{
-            pmap::{
-                page_alloc, page_free, page_insert, page_remove, PageList, PageNode, Pde, CUR_PGDIR,
-            },
-            tlbex::tlb_init_global_vars,
+        kern::pmap::{
+            page_alloc, page_free, page_insert, page_remove, PageList, PageNode, Pde, CUR_PGDIR,
+            PAGES, PAGE_FREE_LIST,
         },
         pa2page, page2kva, page2pa, println, va2pa, PADDR, PTE_ADDR,
     };
     use core::ptr;
 
-    let pp = page_alloc(page_free_list, pages).unwrap();
-    let boot_pgdir = page2kva!(pp, *pages; PageNode) as *mut Pde;
+    let pp = page_alloc().unwrap();
+    let boot_pgdir = page2kva!(pp, unsafe{PAGES}; PageNode) as *mut Pde;
     unsafe { CUR_PGDIR = boot_pgdir };
 
-    let mut pp0 = page_alloc(page_free_list, pages).unwrap();
-    let mut pp1 = page_alloc(page_free_list, pages).unwrap();
-    let mut pp2 = page_alloc(page_free_list, pages).unwrap();
-    let mut pp3 = page_alloc(page_free_list, pages).unwrap();
-    let mut pp4 = page_alloc(page_free_list, pages).unwrap();
+    let mut pp0 = page_alloc().unwrap();
+    let mut pp1 = page_alloc().unwrap();
+    let mut pp2 = page_alloc().unwrap();
+    let mut pp3 = page_alloc().unwrap();
+    let mut pp4 = page_alloc().unwrap();
 
     assert!(!pp0.is_null());
     assert!(!pp1.is_null() && pp1 != pp0);
@@ -95,40 +95,43 @@ pub fn test_page_strong(
     assert!(!pp3.is_null() && pp3 != pp0 && pp3 != pp2 && pp3 != pp1);
     assert!(!pp4.is_null() && pp4 != pp0 && pp4 != pp3 && pp4 != pp2 && pp4 != pp1);
 
-    let mut zfl = PageList::new();
-    tlb_init_global_vars(&mut zfl, pages);
+    let zfl;
+    unsafe {
+        zfl = PAGE_FREE_LIST;
+        PAGE_FREE_LIST = PageList::new();
+    }
 
-    unsafe { assert!(page_insert(boot_pgdir, 0, 0, 0, pp1, &mut zfl, pages).is_err()) };
-    if let Err(KError::NoMem) = page_alloc(&mut zfl, pages) {
+    unsafe { assert!(page_insert(boot_pgdir, 0, 0, 0, pp1).is_err()) };
+    if let Err(KError::NoMem) = page_alloc() {
     } else {
         unreachable!()
     }
 
-    page_free(&mut zfl, &mut pp0);
+    page_free(&mut pp0);
     unsafe {
-        assert!(page_insert(boot_pgdir, 0, 0, 0, pp1, &mut zfl, pages).is_ok());
-        assert!(page_insert(boot_pgdir, PAGE_SIZE, 0, 0, pp2, &mut zfl, pages).is_ok());
-        assert!(page_insert(boot_pgdir, PAGE_SIZE * 2, 0, 0, pp3, &mut zfl, pages).is_ok());
+        assert!(page_insert(boot_pgdir, 0, 0, 0, pp1).is_ok());
+        assert!(page_insert(boot_pgdir, PAGE_SIZE, 0, 0, pp2).is_ok());
+        assert!(page_insert(boot_pgdir, PAGE_SIZE * 2, 0, 0, pp3).is_ok());
         assert_eq!(
-            page2pa!(pp0, *pages; PageNode),
+            page2pa!(pp0, PAGES; PageNode),
             PTE_ADDR!((*boot_pgdir) as usize)
         );
 
         println!("va2pa(boot_pgdir, 0x0) is 0x{:x}.", va2pa!(boot_pgdir, 0x0));
-        println!("page2pa(pp1) is 0x{:x}.", page2pa!(pp1, *pages; PageNode));
+        println!("page2pa(pp1) is 0x{:x}.", page2pa!(pp1, PAGES; PageNode));
     }
 
     unsafe {
-        assert_eq!(va2pa!(boot_pgdir, 0x0), page2pa!(pp1, *pages; PageNode));
+        assert_eq!(va2pa!(boot_pgdir, 0x0), page2pa!(pp1, PAGES; PageNode));
         assert_eq!((*pp1).data.pp_ref, 1);
         assert_eq!(
             va2pa!(boot_pgdir, PAGE_SIZE),
-            page2pa!(pp2, *pages; PageNode)
+            page2pa!(pp2, PAGES; PageNode)
         );
         assert_eq!((*pp2).data.pp_ref, 1);
         assert_eq!(
             va2pa!(boot_pgdir, PAGE_SIZE * 2),
-            page2pa!(pp3, *pages; PageNode)
+            page2pa!(pp3, PAGES; PageNode)
         );
         assert_eq!((*pp3).data.pp_ref, 1);
     }
@@ -136,53 +139,53 @@ pub fn test_page_strong(
     println!("Start Page Insert.");
 
     unsafe {
-        assert!(page_insert(boot_pgdir, PAGE_SIZE, 0, 0, pp2, &mut zfl, pages).is_ok());
+        assert!(page_insert(boot_pgdir, PAGE_SIZE, 0, 0, pp2).is_ok());
         assert_eq!(
             va2pa!(boot_pgdir, PAGE_SIZE),
-            page2pa!(pp2, *pages; PageNode)
+            page2pa!(pp2, PAGES; PageNode)
         );
         assert_eq!((*pp2).data.pp_ref, 1);
     }
 
     unsafe {
-        assert!(page_insert(boot_pgdir, PDMAP, 0, 0, pp0, &mut zfl, pages).is_err());
-        page_remove(boot_pgdir, 0, 0, &mut zfl, pages);
+        assert!(page_insert(boot_pgdir, PDMAP, 0, 0, pp0).is_err());
+        page_remove(boot_pgdir, 0, 0);
         assert_eq!(!0, va2pa!(boot_pgdir, 0x0));
-        assert!(page_insert(boot_pgdir, PDMAP, 0, 0, pp0, &mut zfl, pages).is_ok());
+        assert!(page_insert(boot_pgdir, PDMAP, 0, 0, pp0).is_ok());
     }
 
     unsafe {
-        assert!(page_insert(boot_pgdir, PAGE_SIZE * 2, 0, 0, pp2, &mut zfl, pages).is_ok());
+        assert!(page_insert(boot_pgdir, PAGE_SIZE * 2, 0, 0, pp2).is_ok());
         assert_eq!(
             va2pa!(boot_pgdir, PAGE_SIZE),
-            page2pa!(pp2, *pages; PageNode)
+            page2pa!(pp2, PAGES; PageNode)
         );
         assert_eq!(
             va2pa!(boot_pgdir, PAGE_SIZE * 2),
-            page2pa!(pp2, *pages; PageNode)
+            page2pa!(pp2, PAGES; PageNode)
         );
         assert_eq!((*pp2).data.pp_ref, 2);
         assert_eq!((*pp3).data.pp_ref, 0);
 
-        assert!(page_insert(boot_pgdir, PAGE_SIZE + PDMAP, 0, 0, pp2, &mut zfl, pages).is_ok());
+        assert!(page_insert(boot_pgdir, PAGE_SIZE + PDMAP, 0, 0, pp2).is_ok());
         assert_eq!((*pp2).data.pp_ref, 3);
     }
 
     println!("Page Insert test over.");
 
-    let pp = page_alloc(&mut zfl, pages).unwrap();
+    let pp = page_alloc().unwrap();
     assert_eq!(pp, pp3);
-    page_remove(boot_pgdir, PAGE_SIZE, 0, &mut zfl, pages);
+    page_remove(boot_pgdir, PAGE_SIZE, 0);
     unsafe {
         assert_eq!(
             va2pa!(boot_pgdir, PAGE_SIZE * 2),
-            page2pa!(pp2, *pages; PageNode)
+            page2pa!(pp2, PAGES; PageNode)
         );
         assert_eq!((*pp2).data.pp_ref, 2);
         assert_eq!((*pp3).data.pp_ref, 0);
     }
 
-    page_remove(boot_pgdir, PAGE_SIZE * 2, 0, &mut zfl, pages);
+    page_remove(boot_pgdir, PAGE_SIZE * 2, 0);
     unsafe {
         assert_eq!(va2pa!(boot_pgdir, 0x0), !0);
         assert_eq!(va2pa!(boot_pgdir, PAGE_SIZE), !0);
@@ -191,7 +194,7 @@ pub fn test_page_strong(
         assert_eq!((*pp3).data.pp_ref, 0);
     }
 
-    page_remove(boot_pgdir, PAGE_SIZE + PDMAP, 0, &mut zfl, pages);
+    page_remove(boot_pgdir, PAGE_SIZE + PDMAP, 0);
     unsafe {
         assert_eq!(va2pa!(boot_pgdir, 0x0), !0);
         assert_eq!(va2pa!(boot_pgdir, PAGE_SIZE), !0);
@@ -200,17 +203,17 @@ pub fn test_page_strong(
         assert_eq!((*pp2).data.pp_ref, 0);
     }
 
-    let pp = page_alloc(&mut zfl, pages).unwrap();
+    let pp = page_alloc().unwrap();
     assert_eq!(pp, pp2);
 
-    assert!(page_alloc(&mut zfl, pages).is_err());
+    assert!(page_alloc().is_err());
     unsafe {
         assert_eq!(
-            page2pa!(pp0, *pages; PageNode),
+            page2pa!(pp0, PAGES; PageNode),
             PTE_ADDR!(*boot_pgdir as usize)
         );
         assert_eq!(
-            page2pa!(pp1, *pages; PageNode),
+            page2pa!(pp1, PAGES; PageNode),
             PTE_ADDR!((*(boot_pgdir as *mut [u32; 2]))[1] as usize)
         );
     }
@@ -223,59 +226,52 @@ pub fn test_page_strong(
         (*pp1).data.pp_ref = 0;
     }
 
-    tlb_init_global_vars(page_free_list, pages);
-    page_free(page_free_list, &mut pp0);
-    page_free(page_free_list, &mut pp1);
-    page_free(page_free_list, &mut pp2);
-    page_free(page_free_list, &mut pp3);
-    page_free(page_free_list, &mut pp4);
-    page_free(
-        page_free_list,
-        &mut (pa2page!(PADDR!(boot_pgdir as usize), *pages; PageNode) as *mut PageNode),
-    );
+    unsafe { PAGE_FREE_LIST = zfl };
+    page_free(&mut pp0);
+    page_free(&mut pp1);
+    page_free(&mut pp2);
+    page_free(&mut pp3);
+    page_free(&mut pp4);
+    unsafe {
+        page_free(&mut (pa2page!(PADDR!(boot_pgdir as usize), PAGES; PageNode) as *mut PageNode));
+    }
 }
 
 #[cfg(ktest_item = "memory")]
-pub fn test_tlb_refill(
-    page_free_list: &mut crate::kern::pmap::PageList,
-    pages: &mut *mut crate::kern::pmap::PageNode,
-) {
+pub fn test_tlb_refill() {
     use crate::{
         kdef::mmu::PAGE_SIZE,
         kern::{
             pmap::{
-                page_alloc, page_free, page_insert, page_lookup, PageList, PageNode, Pde, CUR_PGDIR,
+                page_alloc, page_free, page_insert, page_lookup, PageNode, Pde, CUR_PGDIR, PAGES,
             },
-            tlbex::{_do_tlb_refill, tlb_init_global_vars},
+            tlbex::_do_tlb_refill,
         },
         page2kva, page2pa, println, va2pa,
     };
     use core::arch::asm;
 
-    let pp0 = page_alloc(page_free_list, pages).unwrap();
-    let boot_pddir = page2kva!(pp0, *pages; PageNode) as *mut Pde;
+    let pp0 = page_alloc().unwrap();
+    let boot_pddir = page2kva!(pp0, unsafe{PAGES}; PageNode) as *mut Pde;
     unsafe { CUR_PGDIR = boot_pddir };
 
-    let mut pp0 = page_alloc(page_free_list, pages).unwrap();
-    let pp1 = page_alloc(page_free_list, pages).unwrap();
-    let pp2 = page_alloc(page_free_list, pages).unwrap();
-    let mut pp3 = page_alloc(page_free_list, pages).unwrap();
-    let mut pp4 = page_alloc(page_free_list, pages).unwrap();
+    let mut pp0 = page_alloc().unwrap();
+    let pp1 = page_alloc().unwrap();
+    let pp2 = page_alloc().unwrap();
+    let mut pp3 = page_alloc().unwrap();
+    let mut pp4 = page_alloc().unwrap();
 
-    let mut fl = PageList::new();
-    tlb_init_global_vars(&mut fl, pages);
-
-    page_free(&mut fl, &mut pp0);
+    page_free(&mut pp0);
     unsafe {
-        page_insert(boot_pddir, 0, 0, 0, pp1, &mut fl, pages).unwrap();
-        page_insert(boot_pddir, PAGE_SIZE, 0, 0, pp2, &mut fl, pages).unwrap();
+        page_insert(boot_pddir, 0, 0, 0, pp1).unwrap();
+        page_insert(boot_pddir, PAGE_SIZE, 0, 0, pp2).unwrap();
     }
 
     println!("TLB-Refill check begin.");
 
     let entrys: &mut [u32; 2] = &mut [0; 2];
     _do_tlb_refill(entrys, PAGE_SIZE, 0);
-    let (_, walk_pte) = page_lookup(boot_pddir, PAGE_SIZE, &mut fl, pages).unwrap();
+    let (_, walk_pte) = page_lookup(boot_pddir, PAGE_SIZE).unwrap();
 
     unsafe {
         println!("  entrys: {}, {}", entrys[0], entrys[1]);
@@ -283,23 +279,23 @@ pub fn test_tlb_refill(
         println!("  Right Arm: {}", entrys[1] == (*walk_pte >> 6));
         assert!((entrys[0] == (*walk_pte >> 6)) ^ (entrys[1] == (*walk_pte >> 6)));
         assert_eq!(
-            page2pa!(pp2, *pages; PageNode),
+            page2pa!(pp2, PAGES; PageNode),
             va2pa!(boot_pddir, PAGE_SIZE)
         );
     };
 
     println!("Test #1 Passed.");
 
-    page_free(&mut fl, &mut pp4);
-    page_free(&mut fl, &mut pp3);
+    page_free(&mut pp4);
+    page_free(&mut pp3);
 
-    assert!(page_lookup(boot_pddir, 0x00400000, &mut fl, pages).is_none());
+    assert!(page_lookup(boot_pddir, 0x00400000,).is_none());
     _do_tlb_refill(entrys, 0x00400000, 0);
-    let (pp, _) = page_lookup(boot_pddir, 0x00400000, &mut fl, pages).unwrap();
+    let (pp, _) = page_lookup(boot_pddir, 0x00400000).unwrap();
     assert!(!pp.is_null());
     unsafe {
         assert_eq!(
-            page2pa!(pp3, *pages; PageNode),
+            page2pa!(pp3, PAGES; PageNode),
             va2pa!(boot_pddir, 0x00400000)
         );
     }

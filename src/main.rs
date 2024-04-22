@@ -2,14 +2,13 @@
 #![no_std]
 #![no_main]
 
-use core::{arch::global_asm, include_str, panic::PanicInfo, ptr};
+use core::{arch::global_asm, include_str, panic::PanicInfo};
 
 use rusty_mos::{
     debugln,
     kern::{
         machine::halt,
-        pmap::{mips_detect_memory, mips_vm_init, page_init, PageNode},
-        tlbex::tlb_init_global_vars,
+        pmap::{mips_detect_memory, mips_vm_init, page_init},
     },
     println, CALL_TEST,
 };
@@ -43,19 +42,16 @@ pub extern "C" fn rust_mips_init(
     let mut npage: usize = 0;
     let memsize = ram_low_size as usize;
     let mut freemem: usize = 0;
-    let mut pages: *mut PageNode = ptr::null_mut();
 
     mips_detect_memory(&mut npage, memsize);
-    mips_vm_init(&mut pages, &mut freemem, npage, memsize);
+    mips_vm_init(&mut freemem, npage, memsize);
 
-    let mut page_free_list = page_init(&mut pages, &mut freemem, npage);
-
-    tlb_init_global_vars(&mut page_free_list, &pages);
+    page_init(&mut freemem, npage);
 
     CALL_TEST!(test_linklist; ());
-    CALL_TEST!(test_page; (&mut page_free_list, &mut pages));
-    CALL_TEST!(test_page_strong; (&mut page_free_list, &mut pages));
-    CALL_TEST!(test_tlb_refill; (&mut page_free_list, &mut pages));
+    CALL_TEST!(test_page; ());
+    CALL_TEST!(test_page_strong; ());
+    CALL_TEST!(test_tlb_refill; ());
 
     halt();
 }

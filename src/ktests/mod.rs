@@ -20,16 +20,7 @@ macro_rules! MAKE_TEST {
     };
 }
 
-MAKE_TEST!("memory", test_page; test_memory::test_page; (
-    _page_free_list: &mut crate::kern::pmap::PageList,
-    _pages: &mut *mut crate::kern::pmap::PageNode
-));
-MAKE_TEST!("memory", test_page_strong; test_memory::test_page_strong; (
-    _page_free_list: &mut crate::kern::pmap::PageList,
-    _pages: &mut *mut crate::kern::pmap::PageNode
-));
-MAKE_TEST!("memory", test_tlb_refill; test_memory::test_tlb_refill; (
-    _page_free_list: &mut crate::kern::pmap::PageList,
-    _pages: &mut *mut crate::kern::pmap::PageNode
-));
+MAKE_TEST!("memory", test_page; test_memory::test_page; ());
+MAKE_TEST!("memory", test_page_strong; test_memory::test_page_strong; ());
+MAKE_TEST!("memory", test_tlb_refill; test_memory::test_tlb_refill; ());
 MAKE_TEST!("memory", test_linklist; test_memory::test_linklist; ());
