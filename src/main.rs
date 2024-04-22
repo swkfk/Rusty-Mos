@@ -53,7 +53,8 @@ pub extern "C" fn rust_mips_init(
     tlb_init_global_vars(&mut page_free_list, &pages);
 
     CALL_TEST!(test_linklist; ());
-    CALL_TEST!(test_page; (&mut page_free_list, &mut pages, &mut freemem, npage));
+    CALL_TEST!(test_page; (&mut page_free_list, &mut pages));
+    CALL_TEST!(test_page_strong; (&mut page_free_list, &mut pages));
     CALL_TEST!(test_tlb_refill; (&mut page_free_list, &mut pages));
 
     halt();

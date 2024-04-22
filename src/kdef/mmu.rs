@@ -31,7 +31,7 @@ pub const PTE_C_CACHEABLE: u32 = 0x0018 << PTE_HARDFLAG_SHIFT;
 
 pub const PAGE_SIZE: usize = 1 << PGSHIFT;
 
-const PDMAP: usize = 1 << PDSHIFT;
+pub const PDMAP: usize = 1 << PDSHIFT;
 const PTMAP: usize = PAGE_SIZE;
 
 pub const KERNBASE: usize = 0x80020000;
