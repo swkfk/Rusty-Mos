@@ -7,6 +7,7 @@ use core::{arch::global_asm, include_str, panic::PanicInfo};
 use rusty_mos::{
     debugln,
     kern::{
+        env::env_init,
         machine::halt,
         pmap::{mips_detect_memory, mips_vm_init, page_init},
     },
@@ -52,6 +53,8 @@ pub extern "C" fn rust_mips_init(
     CALL_TEST!(test_page; ());
     CALL_TEST!(test_page_strong; ());
     CALL_TEST!(test_tlb_refill; ());
+
+    env_init(npage);
 
     CALL_TEST!(test_tailq; ());
 

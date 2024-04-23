@@ -24,6 +24,7 @@ pub const NASID: u32 = 256;
 const PTE_HARDFLAG_SHIFT: u8 = 6;
 
 /// Valid bit. If 0 any address matching this entry will cause a tlb miss exception (TLBL/TLBS).
+pub const PTE_G: u32 = 0x0001 << PTE_HARDFLAG_SHIFT;
 pub const PTE_V: u32 = 0x0002 << PTE_HARDFLAG_SHIFT;
 pub const PTE_D: u32 = 0x0004 << PTE_HARDFLAG_SHIFT;
 /// Cache Coherency Attributes bit.
