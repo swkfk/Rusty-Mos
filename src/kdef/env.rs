@@ -1,4 +1,6 @@
-use crate::kern::trap::TrapFrame;
+use core::ptr::null_mut;
+
+use crate::kern::{pmap::Pde, trap::TrapFrame};
 
 use super::queue::{LinkList, LinkNode, TailLinkList};
 
@@ -37,6 +39,7 @@ pub struct EnvData {
     pub trap_frame: TrapFrame,
     pub id: u32,
     pub asid: u32,
+    pub pgdir: *mut Pde,
     pub parent_id: u32,
     pub status: EnvStatus,
     pub priority: u32,
@@ -51,6 +54,7 @@ impl EnvData {
             trap_frame: TrapFrame::const_construct(),
             id: 0,
             asid: 0,
+            pgdir: null_mut(),
             parent_id: 0,
             status: EnvStatus::Free,
             priority: 0,
@@ -75,7 +79,7 @@ impl EnvNode {
     }
 }
 
-const LOG2NENV: u8 = 10;
+pub const LOG2NENV: u8 = 10;
 pub const NENV: usize = 1 << LOG2NENV;
 
 #[macro_export]
