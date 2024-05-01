@@ -65,7 +65,7 @@ unsafe fn map_segment(pgdir: *mut Pde, asid: u32, pa: usize, va: usize, size: us
     for i in (0..size).step_by(PAGE_SIZE) {
         unsafe {
             let pp = pa2page!(pa + i, PAGES; PageNode) as *mut PageNode;
-            page_insert(pgdir, va, asid, perm, pp).unwrap();
+            page_insert(pgdir, va + i, asid, perm, pp).unwrap();
         }
     }
 }
