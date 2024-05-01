@@ -15,6 +15,7 @@ use super::tlbex::tlb_invalidate;
 pub static mut CUR_PGDIR: *mut Pde = ptr::null_mut();
 pub static mut PAGES: *mut PageNode = core::ptr::null_mut();
 pub static mut PAGE_FREE_LIST: PageList = PageList::new();
+pub static mut NPAGE: usize = 0;
 
 const PAGE_SIZE: usize = 4096;
 
@@ -28,12 +29,12 @@ pub struct PageData {
     pub pp_ref: u16,
 }
 
-pub fn mips_detect_memory(npage: &mut usize, memsize: usize) {
-    *npage = memsize / 4096;
+pub fn mips_detect_memory(memsize: usize) {
+    unsafe { NPAGE = memsize / 4096 }
     println!(
         "Memory Size: {} KiB; Page Number: {}.",
         memsize / 1024,
-        *npage
+        unsafe { NPAGE }
     );
 }
 
@@ -68,12 +69,12 @@ fn alloc(
     alloced_mem as *mut PageNode
 }
 
-pub fn mips_vm_init(freemem: &mut usize, npage: usize, memsize: usize) {
+pub fn mips_vm_init(freemem: &mut usize, memsize: usize) {
     unsafe {
         PAGES = alloc(
             freemem,
             memsize,
-            npage * size_of::<PageNode>(),
+            NPAGE * size_of::<PageNode>(),
             PAGE_SIZE,
             true,
         );
@@ -82,18 +83,18 @@ pub fn mips_vm_init(freemem: &mut usize, npage: usize, memsize: usize) {
     debugln!("> pmap.rs: mips vm init success");
 }
 
-pub fn page_init(freemem: &mut usize, npage: usize) {
+pub fn page_init(freemem: &mut usize) {
     let pages = unsafe { PAGES };
 
     *freemem = ROUND!(*freemem; PAGE_SIZE);
 
     let mut page_id = 0;
-    while page_id < npage && page_id << PGSHIFT < PADDR!(*freemem) {
+    while page_id < unsafe { NPAGE } && page_id << PGSHIFT < PADDR!(*freemem) {
         unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 1 };
         page_id += 1;
     }
 
-    while page_id < npage {
+    while page_id < unsafe { NPAGE } {
         unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 0 };
         unsafe { PAGE_FREE_LIST.insert_head(ARRAY_PTR!(pages; page_id, PageNode)) };
         page_id += 1;

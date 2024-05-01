@@ -14,7 +14,7 @@ use crate::{
         },
     },
     kern::{
-        pmap::{page_decref, page_insert, page_remove, PageNode, Pte, PAGES},
+        pmap::{page_decref, page_insert, page_remove, PageNode, Pte, NPAGE, PAGES},
         tlbex::tlb_invalidate,
     },
     pa2page, page2kva, println, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
@@ -79,7 +79,7 @@ fn mkenvid(e: *mut EnvNode) -> u32 {
     }
 }
 
-pub fn env_init(npage: usize) {
+pub fn env_init() {
     println!("Envs are to the memory 0x{:x}", unsafe {
         addr_of_mut!(ENVS) as usize
     });
@@ -99,7 +99,7 @@ pub fn env_init(npage: usize) {
             0,
             PADDR!(PAGES as usize),
             UPAGES,
-            ROUND!(npage * size_of::<PageNode>(); PAGE_SIZE),
+            ROUND!(NPAGE * size_of::<PageNode>(); PAGE_SIZE),
             PTE_G,
         );
         map_segment(

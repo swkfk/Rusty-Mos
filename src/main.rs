@@ -40,21 +40,20 @@ pub extern "C" fn rust_mips_init(
     println!("Ram low size={}", ram_low_size);
     println!();
 
-    let mut npage: usize = 0;
     let memsize = ram_low_size as usize;
     let mut freemem: usize = 0;
 
-    mips_detect_memory(&mut npage, memsize);
-    mips_vm_init(&mut freemem, npage, memsize);
+    mips_detect_memory(memsize);
+    mips_vm_init(&mut freemem, memsize);
 
-    page_init(&mut freemem, npage);
+    page_init(&mut freemem);
 
     CALL_TEST!(test_linklist; ());
     CALL_TEST!(test_page; ());
     CALL_TEST!(test_page_strong; ());
     CALL_TEST!(test_tlb_refill; ());
 
-    env_init(npage);
+    env_init();
 
     CALL_TEST!(test_tailq; ());
 
