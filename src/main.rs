@@ -57,6 +57,7 @@ pub extern "C" fn rust_mips_init(
 
     CALL_TEST!(test_tailq; ());
     CALL_TEST!(test_envs; ());
+    CALL_TEST!(test_envid2env; ());
 
     halt();
 }

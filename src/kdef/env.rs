@@ -5,7 +5,7 @@ use crate::kern::{pmap::Pde, trap::TrapFrame};
 use super::queue::{LinkList, LinkNode, TailLinkList};
 
 #[repr(i8)]
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum EnvStatus {
     #[default]
     Free = 0,

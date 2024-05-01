@@ -166,3 +166,32 @@ pub fn test_envs() {
         env_free(pe2);
     }
 }
+
+#[cfg(ktest_item = "env")]
+pub fn test_envid2env() {
+    use crate::{
+        kdef::{env::EnvStatus, error::KError},
+        kern::env::{env_alloc, envid2env, CUR_ENV},
+    };
+
+    let pe0;
+    let pe2;
+    unsafe {
+        pe0 = env_alloc(0).unwrap();
+        pe2 = env_alloc(0).unwrap();
+        (*pe2).data.status = EnvStatus::Free;
+        if let Err(KError::BadEnv) = envid2env((*pe2).data.id, false) {
+        } else {
+            unreachable!()
+        }
+
+        (*pe2).data.status = EnvStatus::Runnable;
+        assert_eq!(
+            (*pe2).data.id,
+            (*envid2env((*pe2).data.id, false).unwrap()).data.id
+        );
+
+        CUR_ENV = pe0;
+        assert!(envid2env((*pe2).data.id, true).is_err());
+    }
+}

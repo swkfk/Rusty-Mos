@@ -17,7 +17,7 @@ use crate::{
         pmap::{page_decref, page_insert, page_remove, PageNode, Pte, NPAGE, PAGES},
         tlbex::tlb_invalidate,
     },
-    pa2page, page2kva, println, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
+    pa2page, page2kva, println, ENVX, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
 
 use super::pmap::{page_alloc, Pde};
@@ -204,4 +204,26 @@ pub unsafe fn env_free(env: *mut EnvNode) {
 
     ENV_FREE_LIST.insert_head(env);
     ENV_SCHE_LIST.remove(env);
+}
+
+/// # Safety
+///
+pub unsafe fn envid2env(envid: u32, checkperm: bool) -> Result<*mut EnvNode, KError> {
+    if 0 == envid {
+        return Ok(CUR_ENV);
+    }
+    let e = (addr_of_mut!(ENVS) as *mut EnvNode).add(ENVX!(envid as usize));
+    if (*e).data.status == EnvStatus::Free || (*e).data.id != envid {
+        return Err(KError::BadEnv);
+    }
+
+    // Need to check the perm
+    if checkperm
+        && (((*e).data.id != (*CUR_ENV).data.id && (*e).data.parent_id != (*CUR_ENV).data.id)
+            || CUR_ENV.is_null())
+    {
+        Err(KError::BadEnv)
+    } else {
+        Ok(e)
+    }
 }
