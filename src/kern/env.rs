@@ -80,6 +80,11 @@ fn mkenvid(e: *mut EnvNode) -> u32 {
 }
 
 pub fn env_init() {
+    unsafe {
+        debugln!("> env_init: enable the tailq ENV_SCHE_LIST");
+        ENV_SCHE_LIST.enable();
+    }
+
     println!("Envs are to the memory 0x{:x}", unsafe {
         addr_of_mut!(ENVS) as usize
     });
