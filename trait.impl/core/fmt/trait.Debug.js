@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"rusty_mos":[["impl Debug for <a class=\"enum\" href=\"rusty_mos/kdef/error/enum.KError.html\" title=\"enum rusty_mos::kdef::error::KError\">KError</a>"]]
+"rusty_mos":[["impl Debug for <a class=\"enum\" href=\"rusty_mos/kdef/env/enum.EnvStatus.html\" title=\"enum rusty_mos::kdef::env::EnvStatus\">EnvStatus</a>"],["impl Debug for <a class=\"enum\" href=\"rusty_mos/kdef/error/enum.KError.html\" title=\"enum rusty_mos::kdef::error::KError\">KError</a>"],["impl Debug for <a class=\"struct\" href=\"rusty_mos/kern/trap/struct.TrapFrame.html\" title=\"struct rusty_mos::kern::trap::TrapFrame\">TrapFrame</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

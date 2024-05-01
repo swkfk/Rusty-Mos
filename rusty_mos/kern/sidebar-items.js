@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["machine","pmap","tlbex"]};
+window.SIDEBAR_ITEMS = {"mod":["env","machine","pmap","tlbex","trap"]};

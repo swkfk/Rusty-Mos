@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["LinkList","LinkNode"]};
+window.SIDEBAR_ITEMS = {"struct":["LinkList","LinkNode","TailLinkList"]};

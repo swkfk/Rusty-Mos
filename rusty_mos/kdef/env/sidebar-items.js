@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["LOG2NENV","NENV"],"enum":["EnvStatus"],"struct":["EnvData","IpcData"],"type":["EnvList","EnvNode","EnvTailList"]};
