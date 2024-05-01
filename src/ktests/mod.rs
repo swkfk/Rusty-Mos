@@ -27,3 +27,4 @@ MAKE_TEST!("memory", test_tlb_refill; test_memory::test_tlb_refill; ());
 MAKE_TEST!("memory", test_linklist; test_memory::test_linklist; ());
 
 MAKE_TEST!("env", test_tailq; test_env::test_tailq; ());
+MAKE_TEST!("env", test_envs; test_env::test_envs; ());
