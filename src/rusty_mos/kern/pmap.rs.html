@@ -201,6 +201,7 @@
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::{mem::size_of, ptr};
 
 <span class="kw">use crate</span>::{
@@ -218,6 +219,7 @@
 <span class="kw">pub static </span><span class="kw-2">mut </span>CUR_PGDIR: <span class="kw-2">*mut </span>Pde = ptr::null_mut();
 <span class="kw">pub static </span><span class="kw-2">mut </span>PAGES: <span class="kw-2">*mut </span>PageNode = core::ptr::null_mut();
 <span class="kw">pub static </span><span class="kw-2">mut </span>PAGE_FREE_LIST: PageList = PageList::new();
+<span class="kw">pub static </span><span class="kw-2">mut </span>NPAGE: usize = <span class="number">0</span>;
 
 <span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
 
@@ -231,12 +233,12 @@
     <span class="kw">pub </span>pp_ref: u16,
 }
 
-<span class="kw">pub fn </span>mips_detect_memory(npage: <span class="kw-2">&amp;mut </span>usize, memsize: usize) {
-    <span class="kw-2">*</span>npage = memsize / <span class="number">4096</span>;
+<span class="kw">pub fn </span>mips_detect_memory(memsize: usize) {
+    <span class="kw">unsafe </span>{ NPAGE = memsize / <span class="number">4096 </span>}
     <span class="macro">println!</span>(
         <span class="string">"Memory Size: {} KiB; Page Number: {}."</span>,
         memsize / <span class="number">1024</span>,
-        <span class="kw-2">*</span>npage
+        <span class="kw">unsafe </span>{ NPAGE }
     );
 }
 
@@ -271,12 +273,12 @@
     alloced_mem <span class="kw">as </span><span class="kw-2">*mut </span>PageNode
 }
 
-<span class="kw">pub fn </span>mips_vm_init(freemem: <span class="kw-2">&amp;mut </span>usize, npage: usize, memsize: usize) {
+<span class="kw">pub fn </span>mips_vm_init(freemem: <span class="kw-2">&amp;mut </span>usize, memsize: usize) {
     <span class="kw">unsafe </span>{
         PAGES = alloc(
             freemem,
             memsize,
-            npage * size_of::&lt;PageNode&gt;(),
+            NPAGE * size_of::&lt;PageNode&gt;(),
             PAGE_SIZE,
             <span class="bool-val">true</span>,
         );
@@ -285,18 +287,18 @@
     <span class="macro">debugln!</span>(<span class="string">"&gt; pmap.rs: mips vm init success"</span>);
 }
 
-<span class="kw">pub fn </span>page_init(freemem: <span class="kw-2">&amp;mut </span>usize, npage: usize) {
+<span class="kw">pub fn </span>page_init(freemem: <span class="kw-2">&amp;mut </span>usize) {
     <span class="kw">let </span>pages = <span class="kw">unsafe </span>{ PAGES };
 
     <span class="kw-2">*</span>freemem = <span class="macro">ROUND!</span>(<span class="kw-2">*</span>freemem; PAGE_SIZE);
 
     <span class="kw">let </span><span class="kw-2">mut </span>page_id = <span class="number">0</span>;
-    <span class="kw">while </span>page_id &lt; npage &amp;&amp; page_id &lt;&lt; PGSHIFT &lt; <span class="macro">PADDR!</span>(<span class="kw-2">*</span>freemem) {
+    <span class="kw">while </span>page_id &lt; <span class="kw">unsafe </span>{ NPAGE } &amp;&amp; page_id &lt;&lt; PGSHIFT &lt; <span class="macro">PADDR!</span>(<span class="kw-2">*</span>freemem) {
         <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span><span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)).data).pp_ref = <span class="number">1 </span>};
         page_id += <span class="number">1</span>;
     }
 
-    <span class="kw">while </span>page_id &lt; npage {
+    <span class="kw">while </span>page_id &lt; <span class="kw">unsafe </span>{ NPAGE } {
         <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span><span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)).data).pp_ref = <span class="number">0 </span>};
         <span class="kw">unsafe </span>{ PAGE_FREE_LIST.insert_head(<span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)) };
         page_id += <span class="number">1</span>;
