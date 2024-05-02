@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["ARRAY_PTR","CALL_TEST","ENVX","GEN_MASK","KADDR","PADDR","PDX","PPN","PTE_ADDR","PTX","ROUND","debug","debugln","pa2page","page2kva","page2pa","page2ppn","print","println","va2pa"],"mod":["kdef","kern","klib","ktests"]};
+window.SIDEBAR_ITEMS = {"macro":["ARRAY_PTR","CALL_TEST","ENVX","GEN_MASK","KADDR","PADDR","PDX","PPN","PTE_ADDR","PTX","ROUND","ROUNDDOWN","debug","debugln","pa2page","page2kva","page2pa","page2ppn","print","println","va2pa"],"mod":["kdef","kern","klib","ktests"]};
