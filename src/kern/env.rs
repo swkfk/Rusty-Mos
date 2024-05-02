@@ -267,3 +267,17 @@ pub unsafe fn load_icode(e: *mut EnvNode, binary: *const u8, size: usize) {
 
     (*e).data.trap_frame.cp0_epc = (*ehdr).entry;
 }
+
+/// # Safety
+///
+pub unsafe fn env_create(binary: *const u8, size: usize, priority: u32) -> Option<*mut EnvNode> {
+    let e = env_alloc(0).ok()?;
+
+    (*e).data.priority = priority;
+    (*e).data.status = EnvStatus::Runnable;
+
+    load_icode(e, binary, size);
+    ENV_SCHE_LIST.insert_head(e);
+
+    Some(e)
+}
