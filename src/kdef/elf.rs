@@ -12,6 +12,8 @@ pub type ElfMapperFn =
 
 const EI_NIDNET: usize = 16;
 
+#[derive(Clone, Copy)]
+#[repr(C)]
 pub struct Elf32Ehdr {
     ident: [u8; EI_NIDNET],
     ftype: Elf32Half,
@@ -31,17 +33,15 @@ pub struct Elf32Ehdr {
 
 impl Elf32Ehdr {
     pub fn from(binary: *const u8, size: usize) -> *const Self {
-        let ehdr = binary as *const Self;
-        let ehdr_type = unsafe { (*ehdr).ftype };
-        let ehdr_ident = unsafe { (*ehdr).ident };
+        let ehdr = unsafe { *(binary as *const Self) };
         if size >= size_of::<Elf32Ehdr>()
-            && ehdr_type == 2
-            && ehdr_ident[0] == 0x7f
-            && ehdr_ident[1] == b'E'
-            && ehdr_ident[2] == b'L'
-            && ehdr_ident[3] == b'F'
+            && ehdr.ftype == 2
+            && ehdr.ident[0] == 0x7f
+            && ehdr.ident[1] == b'E'
+            && ehdr.ident[2] == b'L'
+            && ehdr.ident[3] == b'F'
         {
-            ehdr
+            binary as *const Self
         } else {
             null()
         }
@@ -56,6 +56,7 @@ impl Elf32Ehdr {
     }
 }
 
+#[repr(C)]
 pub struct Elf32Phdr {
     pub stype: Elf32Word,
     pub offset: Elf32Off,
