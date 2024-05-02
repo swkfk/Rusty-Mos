@@ -10,6 +10,13 @@ macro_rules! ROUND {
     };
 }
 
+#[macro_export]
+macro_rules! ROUNDDOWN {
+    ($x: expr; $n: expr) => {
+        $x & !($n - 1)
+    };
+}
+
 /// Get the array\[i\] via the raw pointer
 ///
 /// The `$i` is the index of the target element, starting from **zero**.

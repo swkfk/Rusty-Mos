@@ -7,6 +7,7 @@ use crate::{
     debugln,
     kdef::{
         cp0reg::*,
+        elf::{Elf32Ehdr, Elf32Phdr, PT_LOAD},
         env::{EnvList, EnvNode, EnvStatus, EnvTailList, LOG2NENV, NENV},
         error::KError,
         mmu::{
@@ -20,7 +21,10 @@ use crate::{
     pa2page, page2kva, println, ENVX, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
 
-use super::pmap::{page_alloc, Pde};
+use super::{
+    elf::elf_load_seg,
+    pmap::{page_alloc, Pde},
+};
 
 #[repr(align(4096))]
 pub struct EnvsWrapper([EnvNode; NENV]);
@@ -226,4 +230,40 @@ pub unsafe fn envid2env(envid: u32, checkperm: bool) -> Result<*mut EnvNode, KEr
     } else {
         Ok(e)
     }
+}
+
+/// # Safety
+///
+pub unsafe fn load_icode(e: *mut EnvNode, binary: *const u8, size: usize) {
+    let mapper = |env: *const EnvNode,
+                  va: usize,
+                  offset: isize,
+                  perm: u32,
+                  src: *const u8,
+                  len: usize|
+     -> Result<(), KError> {
+        let p = page_alloc()?;
+        if !src.is_null() {
+            copy_nonoverlapping(
+                src,
+                (page2kva!(p, PAGES; PageNode) as *mut u8).offset(offset),
+                len,
+            )
+        }
+        page_insert((*env).data.pgdir, va, (*env).data.asid, perm, p)
+    };
+
+    let ehdr = Elf32Ehdr::from(binary, size);
+    if ehdr.is_null() {
+        panic!("Bad elf detected!");
+    }
+
+    (*ehdr).foreach(|ph_off| {
+        let ph = binary.add(ph_off as usize) as *const Elf32Phdr;
+        if (*ph).stype == PT_LOAD {
+            elf_load_seg(ph, binary.add((*ph).offset as usize), mapper, e).unwrap();
+        }
+    });
+
+    (*e).data.trap_frame.cp0_epc = (*ehdr).entry;
 }
