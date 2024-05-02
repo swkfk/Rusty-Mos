@@ -195,3 +195,106 @@ pub fn test_envid2env() {
         assert!(envid2env((*pe2).data.id, true).is_err());
     }
 }
+
+#[cfg(ktest_item = "env")]
+unsafe fn mem_eq(a: *const u8, b: *const u8, size: usize) {
+    for i in 0..size {
+        assert_eq!(
+            *(a.add(i)),
+            *(b.add(i)),
+            "Non Eq 0x{:x}@0x{:x} <-> 0x{:x}@0x{:x}",
+            *(a.add(i)),
+            (a.add(i)) as usize,
+            *(b.add(i)),
+            (b.add(i)) as usize,
+        );
+    }
+}
+
+#[cfg(ktest_item = "env")]
+unsafe fn mem_eqz(a: *const u8, size: usize) {
+    for i in 0..size {
+        assert_eq!(
+            0,
+            *(a.add(i)),
+            "Non Eqz 0x{:x}@0x{:x} with i={}",
+            *(a.add(i)),
+            (a.add(i)) as usize,
+            i
+        );
+    }
+}
+
+#[cfg(ktest_item = "env")]
+unsafe fn seg_check(
+    pgdir: *mut crate::kern::pmap::Pde,
+    mut va: usize,
+    mut std: *const u8,
+    mut size: usize,
+) {
+    use crate::{
+        kdef::mmu::PAGE_SIZE, kern::pmap::page_lookup, println, KADDR, PTE_ADDR, ROUNDDOWN,
+    };
+    use core::cmp::min;
+
+    println!(
+        "Segment check: 0x{:x} to 0x{:x} ({}) with std: 0x{:x}",
+        va,
+        va + size,
+        size,
+        std as usize
+    );
+    let off = va - ROUNDDOWN!(va; PAGE_SIZE);
+    if off != 0 {
+        let n = min(size, PAGE_SIZE - off);
+        let (_, pte) = page_lookup(pgdir, va - off).unwrap();
+        if std.is_null() {
+            mem_eqz((KADDR!(PTE_ADDR!(*pte)) as usize + off) as *const u8, n);
+        } else {
+            mem_eq(
+                (KADDR!(PTE_ADDR!(*pte)) as usize + off) as *const u8,
+                std,
+                n,
+            );
+            std = std.add(n);
+        }
+        va += n;
+        size -= n;
+    }
+
+    for i in (0..size).step_by(PAGE_SIZE) {
+        let n = min(size - i, PAGE_SIZE);
+        let (_, pte) = page_lookup(pgdir, va + i).unwrap();
+        if std.is_null() {
+            mem_eqz(KADDR!(PTE_ADDR!(*pte)) as *const u8, n);
+        } else {
+            mem_eq(KADDR!(PTE_ADDR!(*pte)) as *const u8, std.add(i), n);
+        }
+    }
+}
+
+#[cfg(ktest_item = "env")]
+pub fn test_icode_loader() {
+    use crate::kern::env::env_create;
+    use core::ptr::{addr_of, null};
+
+    let binary_start = include_bytes!("bin/icode_check.b");
+    let icode_check_401030 = include_bytes!("bin/icode_check.b.seg401030");
+    let icode_check_402000 = include_bytes!("bin/icode_check.b.seg402000");
+    unsafe {
+        let e = env_create(addr_of!(*binary_start) as *const u8, binary_start.len(), 1).unwrap();
+        seg_check(
+            (*e).data.pgdir,
+            0x401030,
+            addr_of!(*icode_check_401030) as *const u8,
+            icode_check_401030.len(),
+        );
+        seg_check(
+            (*e).data.pgdir,
+            0x402000,
+            addr_of!(*icode_check_402000) as *const u8,
+            icode_check_402000.len(),
+        );
+        seg_check((*e).data.pgdir, 0x402fbc, null(), 4048);
+    }
+}
