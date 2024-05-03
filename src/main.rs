@@ -19,6 +19,8 @@ global_asm!(include_str!("kasm/tlb.S"));
 global_asm!(include_str!("start.S"));
 global_asm!(include_str!("kasm/entry.S"));
 global_asm!(include_str!("kasm/genex.S"));
+global_asm!(include_str!("kasm/kclock.S"));
+global_asm!(include_str!("kasm/env.S"));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
