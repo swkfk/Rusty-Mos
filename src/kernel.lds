@@ -10,6 +10,16 @@ ENTRY(_start)
 
 SECTIONS {
 
+	. = 0x80000000;
+	.tlb_miss_entry : {
+		*(.text.tlb_miss_entry)
+	}
+
+	. = 0x80000180;
+	.exc_gen_entry : {
+		*(.text.exc_gen_entry)
+	}
+
 	/* fill in the correct address of the key sections: text, data, bss. */
 
 	. = 0x80020000;
