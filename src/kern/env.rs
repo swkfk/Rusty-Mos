@@ -1,6 +1,6 @@
 use core::{
     mem::size_of,
-    ptr::{self, addr_of_mut, copy_nonoverlapping, null_mut},
+    ptr::{self, addr_of, addr_of_mut, copy_nonoverlapping, null_mut},
 };
 
 use crate::{
@@ -11,11 +11,12 @@ use crate::{
         env::{EnvList, EnvNode, EnvStatus, EnvTailList, LOG2NENV, NENV},
         error::KError,
         mmu::{
-            NASID, PAGE_SIZE, PDSHIFT, PGSHIFT, PTE_G, PTE_V, UENVS, UPAGES, USTACKTOP, UTOP, UVPT,
+            KSTACKTOP, NASID, PAGE_SIZE, PDSHIFT, PGSHIFT, PTE_G, PTE_V, UENVS, UPAGES, USTACKTOP,
+            UTOP, UVPT,
         },
     },
     kern::{
-        pmap::{page_decref, page_insert, page_remove, PageNode, Pte, NPAGE, PAGES},
+        pmap::{page_decref, page_insert, page_remove, PageNode, Pte, CUR_PGDIR, NPAGE, PAGES},
         tlbex::tlb_invalidate,
     },
     pa2page, page2kva, println, ENVX, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
@@ -24,6 +25,7 @@ use crate::{
 use super::{
     elf::elf_load_seg,
     pmap::{page_alloc, Pde},
+    trap::TrapFrame,
 };
 
 #[repr(align(4096))]
@@ -280,4 +282,30 @@ pub unsafe fn env_create(binary: *const u8, size: usize, priority: u32) -> Optio
     ENV_SCHE_LIST.insert_head(e);
 
     Some(e)
+}
+
+extern "C" {
+    pub fn env_pop_tf(_1: *const TrapFrame, _2: u32) -> !;
+}
+
+/// Run before the `env_run` for **tests** only
+pub static mut PRE_ENV_RUN: fn(*mut EnvNode) = |_| {};
+
+/// # Safety
+///
+pub unsafe fn env_run(env: *mut EnvNode) -> ! {
+    assert_eq!(EnvStatus::Runnable, (*env).data.status);
+
+    PRE_ENV_RUN(env);
+
+    if !CUR_ENV.is_null() {
+        (*CUR_ENV).data.trap_frame = *((KSTACKTOP as *const TrapFrame).sub(1));
+    }
+
+    CUR_ENV = env;
+    (*CUR_ENV).data.env_runs += 1;
+
+    CUR_PGDIR = (*CUR_ENV).data.pgdir;
+
+    env_pop_tf(addr_of!((*CUR_ENV).data.trap_frame), (*CUR_ENV).data.asid);
 }
