@@ -1,3 +1,4 @@
+#[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TrapFrame {
     pub regs: [u32; 32],
@@ -21,4 +22,53 @@ impl TrapFrame {
             cp0_epc: 0,
         }
     }
+}
+
+extern "C" {
+    pub fn handle_reserved(trap_frame: *const TrapFrame);
+    pub fn handle_int(trap_frame: *const TrapFrame);
+    pub fn handle_tlb(trap_frame: *const TrapFrame);
+}
+
+#[export_name = "exception_handlers"]
+pub static EXCEPTION_HANDLERS: [unsafe extern "C" fn(*const TrapFrame); 32] = [
+    /*  0 */ handle_int,
+    /*  1 */ handle_reserved,
+    /*  2 */ handle_tlb,
+    /*  3 */ handle_tlb,
+    /*  4 */ handle_reserved,
+    /*  5 */ handle_reserved,
+    /*  6 */ handle_reserved,
+    /*  7 */ handle_reserved,
+    /*  8 */ handle_reserved,
+    /*  9 */ handle_reserved,
+    /* 10 */ handle_reserved,
+    /* 11 */ handle_reserved,
+    /* 12 */ handle_reserved,
+    /* 13 */ handle_reserved,
+    /* 14 */ handle_reserved,
+    /* 15 */ handle_reserved,
+    /* 16 */ handle_reserved,
+    /* 17 */ handle_reserved,
+    /* 18 */ handle_reserved,
+    /* 19 */ handle_reserved,
+    /* 20 */ handle_reserved,
+    /* 21 */ handle_reserved,
+    /* 22 */ handle_reserved,
+    /* 23 */ handle_reserved,
+    /* 24 */ handle_reserved,
+    /* 25 */ handle_reserved,
+    /* 26 */ handle_reserved,
+    /* 27 */ handle_reserved,
+    /* 28 */ handle_reserved,
+    /* 29 */ handle_reserved,
+    /* 30 */ handle_reserved,
+    /* 31 */ handle_reserved,
+];
+
+/// # Safety
+///
+#[no_mangle]
+pub unsafe fn do_reserved(trap_frame: *const TrapFrame) {
+    panic!("Unknown ExcCode {:2}", (*trap_frame).cp0_cause >> 2 & 0x1f);
 }

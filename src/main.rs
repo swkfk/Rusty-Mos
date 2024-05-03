@@ -17,6 +17,8 @@ use rusty_mos::{
 global_asm!(include_str!("kasm/include/inc.S"));
 global_asm!(include_str!("kasm/tlb.S"));
 global_asm!(include_str!("start.S"));
+global_asm!(include_str!("kasm/entry.S"));
+global_asm!(include_str!("kasm/genex.S"));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
