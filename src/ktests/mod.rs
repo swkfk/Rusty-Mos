@@ -1,5 +1,6 @@
 mod test_env;
 mod test_env_run_1;
+mod test_env_run_2;
 mod test_memory;
 
 #[macro_export]
@@ -33,3 +34,4 @@ MAKE_TEST!("env", test_envid2env; test_env::test_envid2env; ());
 MAKE_TEST!("env", test_icode_loader; test_env::test_icode_loader; ());
 
 MAKE_TEST!("env_run_1", test_loop; test_env_run_1::test_loop; ());
+MAKE_TEST!("env_run_2", test_qsort; test_env_run_2::test_qsort; ());

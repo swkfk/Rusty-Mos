@@ -1,15 +1,3 @@
-use core::ptr::addr_of;
-
-use crate::{
-    kdef::env::EnvNode,
-    kern::{
-        env::{env_create, PRE_ENV_RUN},
-        machine::halt,
-        sched::schedule,
-    },
-    println,
-};
-
 #[allow(dead_code)]
 static mut COUNT: u32 = 0;
 #[allow(dead_code)]
@@ -17,8 +5,19 @@ static mut COUNT800: u32 = 0;
 #[allow(dead_code)]
 static mut COUNT1001: u32 = 0;
 
-// #[cfg(ktest_item = "env_run_1")]
+#[cfg(ktest_item = "env_run_1")]
 pub fn test_loop() {
+    use core::ptr::addr_of;
+
+    use crate::{
+        kdef::env::EnvNode,
+        kern::{
+            env::{env_create, PRE_ENV_RUN},
+            machine::halt,
+            sched::schedule,
+        },
+        println,
+    };
     unsafe {
         PRE_ENV_RUN = |env: *mut EnvNode| {
             if COUNT > 100 {

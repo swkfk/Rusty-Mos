@@ -65,6 +65,7 @@ pub extern "C" fn rust_mips_init(
     CALL_TEST!(test_icode_loader; ());
 
     CALL_TEST!(test_loop; ());
+    CALL_TEST!(test_qsort; ());
 
     halt();
 }
