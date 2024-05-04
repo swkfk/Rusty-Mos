@@ -6,7 +6,8 @@ static mut ENV_REST_COUNT: u32 = 0;
 
 /// # Safety
 ///
-pub unsafe fn sched(r#yield: bool) -> ! {
+#[no_mangle]
+pub unsafe fn schedule(r#yield: bool) -> ! {
     let mut env = CUR_ENV;
     if r#yield || ENV_REST_COUNT == 0 || env.is_null() || (*env).data.status != EnvStatus::Runnable
     {
