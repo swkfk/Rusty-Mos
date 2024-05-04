@@ -8,17 +8,23 @@ OUTPUT_ARCH(mips)
  */
 ENTRY(_start)
 
+PHDRS {
+	exceptions PT_LOAD ;
+	text PT_LOAD ;
+	data PT_LOAD ;
+}
+
 SECTIONS {
 
 	. = 0x80000000;
 	.tlb_miss_entry : {
-		*(.text.tlb_miss_entry)
-	}
+		KEEP(*(.text.tlb_miss_entry))
+	} :exceptions
 
 	. = 0x80000180;
 	.exc_gen_entry : {
-		*(.text.exc_gen_entry)
-	}
+		KEEP(*(.text.exc_gen_entry))
+	} :exceptions
 
 	/* fill in the correct address of the key sections: text, data, bss. */
 
@@ -26,9 +32,11 @@ SECTIONS {
 
 	start = . ;
 
-	.text : { *(.text.*) }
+	.text : { *(.text.*) } :text
 
-	.data : { *(.data.*) }
+	.rodata : { *(.rodata.*) }
+
+	.data : { *(.data.*) } :data
 	bss_start = .;
 
 	.bss : { *(.bss.*) }
