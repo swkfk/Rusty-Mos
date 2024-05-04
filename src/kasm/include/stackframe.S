@@ -8,7 +8,7 @@
 	move    $k0, $sp
 	li      $sp, KSTACKTOP
 \tag:
-	subu    $sp, sp, TF_SIZE
+	subu    $sp, $sp, TF_SIZE
 	sw      $k0, TF_REG29($sp)
 	mfc0    $k0, CP0_STATUS
 	sw      $k0, TF_STATUS($sp)
