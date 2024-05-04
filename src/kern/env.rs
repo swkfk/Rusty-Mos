@@ -17,6 +17,7 @@ use crate::{
     },
     kern::{
         pmap::{page_decref, page_insert, page_remove, PageNode, Pte, CUR_PGDIR, NPAGE, PAGES},
+        sched::schedule,
         tlbex::tlb_invalidate,
     },
     pa2page, page2kva, println, ENVX, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
@@ -214,6 +215,18 @@ pub unsafe fn env_free(env: *mut EnvNode) {
 
 /// # Safety
 ///
+pub unsafe fn env_destory(env: *mut EnvNode) {
+    env_free(env);
+
+    if CUR_ENV == env {
+        CUR_ENV = null_mut();
+        println!("% Killed.");
+        schedule(true);
+    }
+}
+
+/// # Safety
+///
 pub unsafe fn envid2env(envid: u32, checkperm: bool) -> Result<*mut EnvNode, KError> {
     if 0 == envid {
         return Ok(CUR_ENV);
@@ -294,7 +307,12 @@ pub static mut PRE_ENV_RUN: fn(*mut EnvNode) = |_| {};
 /// # Safety
 ///
 pub unsafe fn env_run(env: *mut EnvNode) -> ! {
-    assert_eq!(EnvStatus::Runnable, (*env).data.status);
+    assert_eq!(
+        EnvStatus::Runnable,
+        (*env).data.status,
+        "Id: {}",
+        (*env).data.id
+    );
 
     PRE_ENV_RUN(env);
 
