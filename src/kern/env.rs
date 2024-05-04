@@ -209,8 +209,8 @@ pub unsafe fn env_free(env: *mut EnvNode) {
     tlb_invalidate((*env).data.asid, UVPT + (PDX!(UVPT) << PGSHIFT));
     (*env).data.status = EnvStatus::Free;
 
-    ENV_FREE_LIST.insert_head(env);
     ENV_SCHE_LIST.remove(env);
+    ENV_FREE_LIST.insert_head(env);
 }
 
 /// # Safety
