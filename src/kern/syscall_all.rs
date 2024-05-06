@@ -256,6 +256,20 @@ pub const SYSCALL_TABLE: [SyscallRawPtr; MAX_SYS_NO] = [
 
 /// # Safety
 ///
-pub unsafe fn do_syscall(_trapframe: *mut TrapFrame) {
-    core::mem::transmute::<SyscallRawPtr, SyscallFn>(SYSCALL_TABLE[0])(0, 0, 0, 0, 0);
+pub unsafe fn do_syscall(trapframe: *mut TrapFrame) {
+    let sysno = (*trapframe).regs[4];
+    if !(0..MAX_SYS_NO as u32).contains(&sysno) {
+        (*trapframe).regs[2] = KError::NoSys as u32;
+    }
+    (*trapframe).cp0_epc += size_of::<u32>() as u32;
+
+    let func = core::mem::transmute::<SyscallRawPtr, SyscallFn>(SYSCALL_TABLE[0]);
+    let arg1 = (*trapframe).regs[5];
+    let arg2 = (*trapframe).regs[6];
+    let arg3 = (*trapframe).regs[7];
+    let arg4 = ((*trapframe).regs[29] as *const u32).add(4).read();
+    let arg5 = ((*trapframe).regs[29] as *const u32).add(5).read();
+
+    // TODO: Mind the return value's type!
+    (*trapframe).regs[2] = func(arg1, arg2, arg3, arg4, arg5);
 }
