@@ -6,6 +6,7 @@ const MALTA_PCIIO_BASE: u32 = 0x18000000;
 const MALTA_SERIAL_BASE: u32 = MALTA_PCIIO_BASE + 0x3f8;
 const MALTA_SERIAL_DATA: u32 = MALTA_SERIAL_BASE;
 const MALTA_SERIAL_LSR: u32 = MALTA_SERIAL_BASE + 0x5;
+const MALTA_SERIAL_DATA_READY: u8 = 0x1;
 const MALTA_SERIAL_THR_EMPTY: u8 = 0x20;
 const MALTA_FPGA_BASE: u32 = 0x1f000000;
 
@@ -19,6 +20,18 @@ pub fn print_charc(ch: u8) {
         while (core::ptr::read_volatile(lsr_ptr as *const u8) & MALTA_SERIAL_THR_EMPTY) == 0 {}
     }
     unsafe { core::ptr::write_volatile(data_ptr as *mut u8, ch) }
+}
+
+pub fn scan_charc() -> u8 {
+    let lsr_ptr = KSEG1 + MALTA_SERIAL_LSR;
+    let data_ptr = KSEG1 + MALTA_SERIAL_DATA;
+    unsafe {
+        if (core::ptr::read_volatile(lsr_ptr as *const u8) & MALTA_SERIAL_DATA_READY) != 0 {
+            core::ptr::read_volatile(data_ptr as *const u8)
+        } else {
+            0
+        }
+    }
 }
 
 pub fn halt() -> ! {

@@ -16,7 +16,7 @@ use crate::{
 
 use super::{
     env::{env_alloc, envid2env, CUR_ENV, ENV_SCHE_LIST},
-    machine::print_charc,
+    machine::{print_charc, scan_charc},
     pmap::{page_alloc, page_insert, page_lookup, page_remove},
     sched::schedule,
     trap::TrapFrame,
@@ -214,7 +214,12 @@ unsafe fn sys_ipc_recv(dst_va: u32) -> PureResult {
 }
 
 fn sys_cgetc() -> u8 {
-    unimplemented!()
+    loop {
+        let ch = scan_charc();
+        if ch != 0 {
+            return ch;
+        }
+    }
 }
 
 fn sys_write_dev(_va: u32, _pa: u32, _len: u32) -> PureResult {
