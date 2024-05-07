@@ -3,7 +3,7 @@ target = "mipsel-unknown-none"
 rustflags = [
     "-C",
     "link-arg=-Tsrc/kernel.lds",
-    "--check-cfg=cfg(ktest_item, values(\"memory\", \"env\", \"env_run_1\", \"env_run_2\"))",
+    "--check-cfg=cfg(ktest_item, values(\"memory\", \"env\", \"env_run_1\", \"env_run_2\", \"run_env\"))",
 ]
 
 [unstable]

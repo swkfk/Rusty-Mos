@@ -67,5 +67,7 @@ pub extern "C" fn rust_mips_init(
     CALL_TEST!(test_loop; ());
     CALL_TEST!(test_qsort; ());
 
+    CALL_TEST!(test_run_env; ());
+
     halt();
 }
