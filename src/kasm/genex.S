@@ -28,7 +28,7 @@ END handle_int
 
 BUILD_HANDLER tlb do_tlb_refill
 
-# BUILD_HANDLER mod do_tlb_mod
+BUILD_HANDLER mod do_tlb_mod
 BUILD_HANDLER sys do_syscall
 
 BUILD_HANDLER reserved do_reserved

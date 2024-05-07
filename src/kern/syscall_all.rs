@@ -256,6 +256,7 @@ pub const SYSCALL_TABLE: [SyscallRawPtr; MAX_SYS_NO] = [
 
 /// # Safety
 ///
+#[no_mangle]
 pub unsafe fn do_syscall(trapframe: *mut TrapFrame) {
     let sysno = (*trapframe).regs[4];
     if !(0..MAX_SYS_NO as u32).contains(&sysno) {
