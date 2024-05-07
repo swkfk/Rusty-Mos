@@ -17,11 +17,13 @@ CARGO_BUILD = $(CARGO) build $(CARGO_TARGET)
 .PHONY: build, clean, doc
 
 build:
-ifneq ($(test),)
-	CARGO_BUILD_RUSTFLAGS='--cfg ktest_item="$(test)" --cfg ktest' $(CARGO_BUILD)
-else
 	$(CARGO_BUILD)
-endif
+
+test:
+	MOS_TEST=$(item) $(CARGO_BUILD)
+
+env:
+	MOS_TEST=run_env MOS_RUN_ENV=$(item) $(CARGO_BUILD)
 
 run:
 	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)
