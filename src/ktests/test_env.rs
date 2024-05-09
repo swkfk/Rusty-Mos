@@ -80,7 +80,7 @@ pub fn test_envs() {
             mmu::{PAGE_SIZE, UENVS, UPAGES, UTOP},
         },
         kern::{
-            env::{env_alloc, env_free, BASE_PGDIR, ENVS, ENV_FREE_LIST, ENV_SCHE_LIST},
+            env::{env_alloc, env_free, BASE_PGDIR, ENVS_DATA, ENV_FREE_LIST, ENV_SCHE_LIST},
             pmap::{PageNode, NPAGE, PAGES},
         },
         println, va2pa, PADDR, PDX,
@@ -112,13 +112,13 @@ pub fn test_envs() {
     }
 
     unsafe {
-        println!("pe0: {}", (*pe0).data.id);
-        println!("pe1: {}", (*pe1).data.id);
-        println!("pe2: {}", (*pe2).data.id);
+        println!("pe0: {}", (*(*pe0).data).id);
+        println!("pe1: {}", (*(*pe1).data).id);
+        println!("pe2: {}", (*(*pe2).data).id);
 
-        assert_eq!(2048, (*pe0).data.id);
-        assert_eq!(4097, (*pe1).data.id);
-        assert_eq!(6146, (*pe2).data.id);
+        assert_eq!(2048, (*(*pe0).data).id);
+        assert_eq!(4097, (*(*pe1).data).id);
+        assert_eq!(6146, (*(*pe2).data).id);
     }
 
     println!("env_init test over.");
@@ -133,25 +133,25 @@ pub fn test_envs() {
 
         for page_addr in (0..NENV * size_of::<EnvNode>()).step_by(PAGE_SIZE) {
             assert_eq!(
-                PADDR!(addr_of!(ENVS) as usize) + page_addr,
+                PADDR!(addr_of!(ENVS_DATA) as usize) + page_addr,
                 va2pa!(BASE_PGDIR, UENVS + page_addr)
             );
         }
 
-        println!("pe1->env_pgdir 0x{:x}\n", (*pe1).data.pgdir as usize);
+        println!("pe1->env_pgdir 0x{:x}\n", (*(*pe1).data).pgdir as usize);
 
         assert_eq!(
             *BASE_PGDIR.add(PDX!(UTOP)),
-            *(*pe2).data.pgdir.add(PDX!(UTOP))
+            *(*(*pe2).data).pgdir.add(PDX!(UTOP))
         );
 
-        assert_eq!(0, *(*pe2).data.pgdir.add(PDX!(UTOP) - 1));
+        assert_eq!(0, *(*(*pe2).data).pgdir.add(PDX!(UTOP) - 1));
     }
 
     println!("env_setup_vm test over.");
 
     println!("pe2`s sp register 0x{:x}\n", unsafe {
-        (*pe2).data.trap_frame.regs[29]
+        (*(*pe2).data).trap_frame.regs[29]
     });
 
     unsafe {
@@ -179,20 +179,20 @@ pub fn test_envid2env() {
     unsafe {
         pe0 = env_alloc(0).unwrap();
         pe2 = env_alloc(0).unwrap();
-        (*pe2).data.status = EnvStatus::Free;
-        if let Err(KError::BadEnv) = envid2env((*pe2).data.id, false) {
+        (*(*pe2).data).status = EnvStatus::Free;
+        if let Err(KError::BadEnv) = envid2env((*(*pe2).data).id, false) {
         } else {
             unreachable!()
         }
 
-        (*pe2).data.status = EnvStatus::Runnable;
+        (*(*pe2).data).status = EnvStatus::Runnable;
         assert_eq!(
-            (*pe2).data.id,
-            (*envid2env((*pe2).data.id, false).unwrap()).data.id
+            (*(*pe2).data).id,
+            (*(*envid2env((*(*pe2).data).id, false).unwrap()).data).id
         );
 
         CUR_ENV = pe0;
-        assert!(envid2env((*pe2).data.id, true).is_err());
+        assert!(envid2env((*(*pe2).data).id, true).is_err());
     }
 }
 
@@ -284,17 +284,17 @@ pub fn test_icode_loader() {
     unsafe {
         let e = env_create(addr_of!(*binary_start) as *const u8, binary_start.len(), 1).unwrap();
         seg_check(
-            (*e).data.pgdir,
+            (*(*e).data).pgdir,
             0x401030,
             addr_of!(*icode_check_401030) as *const u8,
             icode_check_401030.len(),
         );
         seg_check(
-            (*e).data.pgdir,
+            (*(*e).data).pgdir,
             0x402000,
             addr_of!(*icode_check_402000) as *const u8,
             icode_check_402000.len(),
         );
-        seg_check((*e).data.pgdir, 0x402fbc, null(), 4048);
+        seg_check((*(*e).data).pgdir, 0x402fbc, null(), 4048);
     }
 }

@@ -24,9 +24,9 @@ pub fn test_loop() {
                 println!("{}: Ticks exceeded the limit 100.", COUNT);
                 halt();
             }
-            println!("% {}: Count = {}", (*env).data.id, COUNT);
+            println!("% {}: Count = {}", (*(*env).data).id, COUNT);
             COUNT += 1;
-            match (*env).data.id {
+            match (*(*env).data).id {
                 0x800 => COUNT800 += 1,
                 0x1001 => COUNT1001 += 1,
                 id => {
@@ -36,7 +36,7 @@ pub fn test_loop() {
             }
             println!(
                 "% {}: env0 count: {}, env1 count: {}, ratio: {}%",
-                (*env).data.id,
+                (*(*env).data).id,
                 COUNT800,
                 COUNT1001,
                 COUNT1001 * 100 / if COUNT800 == 0 { 1 } else { COUNT800 }

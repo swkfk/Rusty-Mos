@@ -18,13 +18,13 @@ pub fn test_qsort() {
             let trapframe = if env == CUR_ENV {
                 (KSTACKTOP as *const TrapFrame).sub(1)
             } else {
-                addr_of!((*env).data.trap_frame)
+                addr_of!((*(*env).data).trap_frame)
             };
             let epc = (*trapframe).cp0_epc;
             if epc == 0x400180 {
                 println!(
                     "% {}: Reach the end pc: 0x{:x}, $v0: 0x{:x}",
-                    (*env).data.id,
+                    (*(*env).data).id,
                     epc,
                     (*trapframe).regs[2]
                 );

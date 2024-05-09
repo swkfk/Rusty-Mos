@@ -37,10 +37,26 @@ fn handle_run_env() {
         )
         .unwrap();
     match env_key.as_str() {
-        "ppa" => {
-            load_icode(&include_file, "ppa", "ppa");
+        "ppa1" => {
+            load_icode(&include_file, "ppa", "ppa1");
             create_env(&include_file, "ppa", 5);
             create_env(&include_file, "ppa", 5);
+        }
+        "ppa2" => {
+            load_icode(&include_file, "ppa", "ppa2");
+            create_env(&include_file, "ppa", 1);
+        }
+        "fktest1" => {
+            load_icode(&include_file, "fktest", "fktest1");
+            create_env(&include_file, "fktest", 1);
+        }
+        "fktest2" => {
+            load_icode(&include_file, "fktest", "fktest2");
+            create_env(&include_file, "fktest", 1);
+        }
+        "pingpong" => {
+            load_icode(&include_file, "pingpong", "pingpong_strong");
+            create_env(&include_file, "pingpong", 20);
         }
         _ => unreachable!(),
     }
