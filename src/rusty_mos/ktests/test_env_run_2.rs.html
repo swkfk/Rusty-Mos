@@ -62,13 +62,13 @@
             <span class="kw">let </span>trapframe = <span class="kw">if </span>env == CUR_ENV {
                 (KSTACKTOP <span class="kw">as </span><span class="kw-2">*const </span>TrapFrame).sub(<span class="number">1</span>)
             } <span class="kw">else </span>{
-                <span class="macro">addr_of!</span>((<span class="kw-2">*</span>env).data.trap_frame)
+                <span class="macro">addr_of!</span>((<span class="kw-2">*</span>(<span class="kw-2">*</span>env).data).trap_frame)
             };
             <span class="kw">let </span>epc = (<span class="kw-2">*</span>trapframe).cp0_epc;
             <span class="kw">if </span>epc == <span class="number">0x400180 </span>{
                 <span class="macro">println!</span>(
                     <span class="string">"% {}: Reach the end pc: 0x{:x}, $v0: 0x{:x}"</span>,
-                    (<span class="kw-2">*</span>env).data.id,
+                    (<span class="kw-2">*</span>(<span class="kw-2">*</span>env).data).id,
                     epc,
                     (<span class="kw-2">*</span>trapframe).regs[<span class="number">2</span>]
                 );

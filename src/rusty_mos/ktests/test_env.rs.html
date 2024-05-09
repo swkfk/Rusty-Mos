@@ -380,7 +380,7 @@
             mmu::{PAGE_SIZE, UENVS, UPAGES, UTOP},
         },
         kern::{
-            env::{env_alloc, env_free, BASE_PGDIR, ENVS, ENV_FREE_LIST, ENV_SCHE_LIST},
+            env::{env_alloc, env_free, BASE_PGDIR, ENVS_DATA, ENV_FREE_LIST, ENV_SCHE_LIST},
             pmap::{PageNode, NPAGE, PAGES},
         },
         println, va2pa, PADDR, PDX,
@@ -412,13 +412,13 @@
     }
 
     <span class="kw">unsafe </span>{
-        <span class="macro">println!</span>(<span class="string">"pe0: {}"</span>, (<span class="kw-2">*</span>pe0).data.id);
-        <span class="macro">println!</span>(<span class="string">"pe1: {}"</span>, (<span class="kw-2">*</span>pe1).data.id);
-        <span class="macro">println!</span>(<span class="string">"pe2: {}"</span>, (<span class="kw-2">*</span>pe2).data.id);
+        <span class="macro">println!</span>(<span class="string">"pe0: {}"</span>, (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe0).data).id);
+        <span class="macro">println!</span>(<span class="string">"pe1: {}"</span>, (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe1).data).id);
+        <span class="macro">println!</span>(<span class="string">"pe2: {}"</span>, (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).id);
 
-        <span class="macro">assert_eq!</span>(<span class="number">2048</span>, (<span class="kw-2">*</span>pe0).data.id);
-        <span class="macro">assert_eq!</span>(<span class="number">4097</span>, (<span class="kw-2">*</span>pe1).data.id);
-        <span class="macro">assert_eq!</span>(<span class="number">6146</span>, (<span class="kw-2">*</span>pe2).data.id);
+        <span class="macro">assert_eq!</span>(<span class="number">2048</span>, (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe0).data).id);
+        <span class="macro">assert_eq!</span>(<span class="number">4097</span>, (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe1).data).id);
+        <span class="macro">assert_eq!</span>(<span class="number">6146</span>, (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).id);
     }
 
     <span class="macro">println!</span>(<span class="string">"env_init test over."</span>);
@@ -433,25 +433,25 @@
 
         <span class="kw">for </span>page_addr <span class="kw">in </span>(<span class="number">0</span>..NENV * size_of::&lt;EnvNode&gt;()).step_by(PAGE_SIZE) {
             <span class="macro">assert_eq!</span>(
-                <span class="macro">PADDR!</span>(<span class="macro">addr_of!</span>(ENVS) <span class="kw">as </span>usize) + page_addr,
+                <span class="macro">PADDR!</span>(<span class="macro">addr_of!</span>(ENVS_DATA) <span class="kw">as </span>usize) + page_addr,
                 <span class="macro">va2pa!</span>(BASE_PGDIR, UENVS + page_addr)
             );
         }
 
-        <span class="macro">println!</span>(<span class="string">"pe1-&gt;env_pgdir 0x{:x}\n"</span>, (<span class="kw-2">*</span>pe1).data.pgdir <span class="kw">as </span>usize);
+        <span class="macro">println!</span>(<span class="string">"pe1-&gt;env_pgdir 0x{:x}\n"</span>, (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe1).data).pgdir <span class="kw">as </span>usize);
 
         <span class="macro">assert_eq!</span>(
             <span class="kw-2">*</span>BASE_PGDIR.add(<span class="macro">PDX!</span>(UTOP)),
-            <span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data.pgdir.add(<span class="macro">PDX!</span>(UTOP))
+            <span class="kw-2">*</span>(<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).pgdir.add(<span class="macro">PDX!</span>(UTOP))
         );
 
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data.pgdir.add(<span class="macro">PDX!</span>(UTOP) - <span class="number">1</span>));
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="kw-2">*</span>(<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).pgdir.add(<span class="macro">PDX!</span>(UTOP) - <span class="number">1</span>));
     }
 
     <span class="macro">println!</span>(<span class="string">"env_setup_vm test over."</span>);
 
     <span class="macro">println!</span>(<span class="string">"pe2`s sp register 0x{:x}\n"</span>, <span class="kw">unsafe </span>{
-        (<span class="kw-2">*</span>pe2).data.trap_frame.regs[<span class="number">29</span>]
+        (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).trap_frame.regs[<span class="number">29</span>]
     });
 
     <span class="kw">unsafe </span>{
@@ -479,20 +479,20 @@
     <span class="kw">unsafe </span>{
         pe0 = env_alloc(<span class="number">0</span>).unwrap();
         pe2 = env_alloc(<span class="number">0</span>).unwrap();
-        (<span class="kw-2">*</span>pe2).data.status = EnvStatus::Free;
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(KError::BadEnv) = envid2env((<span class="kw-2">*</span>pe2).data.id, <span class="bool-val">false</span>) {
+        (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).status = EnvStatus::Free;
+        <span class="kw">if let </span><span class="prelude-val">Err</span>(KError::BadEnv) = envid2env((<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).id, <span class="bool-val">false</span>) {
         } <span class="kw">else </span>{
             <span class="macro">unreachable!</span>()
         }
 
-        (<span class="kw-2">*</span>pe2).data.status = EnvStatus::Runnable;
+        (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).status = EnvStatus::Runnable;
         <span class="macro">assert_eq!</span>(
-            (<span class="kw-2">*</span>pe2).data.id,
-            (<span class="kw-2">*</span>envid2env((<span class="kw-2">*</span>pe2).data.id, <span class="bool-val">false</span>).unwrap()).data.id
+            (<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).id,
+            (<span class="kw-2">*</span>(<span class="kw-2">*</span>envid2env((<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).id, <span class="bool-val">false</span>).unwrap()).data).id
         );
 
         CUR_ENV = pe0;
-        <span class="macro">assert!</span>(envid2env((<span class="kw-2">*</span>pe2).data.id, <span class="bool-val">true</span>).is_err());
+        <span class="macro">assert!</span>(envid2env((<span class="kw-2">*</span>(<span class="kw-2">*</span>pe2).data).id, <span class="bool-val">true</span>).is_err());
     }
 }
 
@@ -584,18 +584,18 @@
     <span class="kw">unsafe </span>{
         <span class="kw">let </span>e = env_create(<span class="macro">addr_of!</span>(<span class="kw-2">*</span>binary_start) <span class="kw">as </span><span class="kw-2">*const </span>u8, binary_start.len(), <span class="number">1</span>).unwrap();
         seg_check(
-            (<span class="kw-2">*</span>e).data.pgdir,
+            (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).pgdir,
             <span class="number">0x401030</span>,
             <span class="macro">addr_of!</span>(<span class="kw-2">*</span>icode_check_401030) <span class="kw">as </span><span class="kw-2">*const </span>u8,
             icode_check_401030.len(),
         );
         seg_check(
-            (<span class="kw-2">*</span>e).data.pgdir,
+            (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).pgdir,
             <span class="number">0x402000</span>,
             <span class="macro">addr_of!</span>(<span class="kw-2">*</span>icode_check_402000) <span class="kw">as </span><span class="kw-2">*const </span>u8,
             icode_check_402000.len(),
         );
-        seg_check((<span class="kw-2">*</span>e).data.pgdir, <span class="number">0x402fbc</span>, null(), <span class="number">4048</span>);
+        seg_check((<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).pgdir, <span class="number">0x402fbc</span>, null(), <span class="number">4048</span>);
     }
 }
 </code></pre></div></section></main></body></html>

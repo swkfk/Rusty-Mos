@@ -77,9 +77,9 @@
                 <span class="macro">println!</span>(<span class="string">"{}: Ticks exceeded the limit 100."</span>, COUNT);
                 halt();
             }
-            <span class="macro">println!</span>(<span class="string">"% {}: Count = {}"</span>, (<span class="kw-2">*</span>env).data.id, COUNT);
+            <span class="macro">println!</span>(<span class="string">"% {}: Count = {}"</span>, (<span class="kw-2">*</span>(<span class="kw-2">*</span>env).data).id, COUNT);
             COUNT += <span class="number">1</span>;
-            <span class="kw">match </span>(<span class="kw-2">*</span>env).data.id {
+            <span class="kw">match </span>(<span class="kw-2">*</span>(<span class="kw-2">*</span>env).data).id {
                 <span class="number">0x800 </span>=&gt; COUNT800 += <span class="number">1</span>,
                 <span class="number">0x1001 </span>=&gt; COUNT1001 += <span class="number">1</span>,
                 id =&gt; {
@@ -89,7 +89,7 @@
             }
             <span class="macro">println!</span>(
                 <span class="string">"% {}: env0 count: {}, env1 count: {}, ratio: {}%"</span>,
-                (<span class="kw-2">*</span>env).data.id,
+                (<span class="kw-2">*</span>(<span class="kw-2">*</span>env).data).id,
                 COUNT800,
                 COUNT1001,
                 COUNT1001 * <span class="number">100 </span>/ <span class="kw">if </span>COUNT800 == <span class="number">0 </span>{ <span class="number">1 </span>} <span class="kw">else </span>{ COUNT800 }
