@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["do_reserved","handle_int","handle_reserved","handle_tlb"],"static":["EXCEPTION_HANDLERS"],"struct":["TrapFrame"]};
+window.SIDEBAR_ITEMS = {"fn":["do_reserved","handle_int","handle_mod","handle_reserved","handle_sys","handle_tlb"],"static":["EXCEPTION_HANDLERS"],"struct":["TrapFrame"]};
