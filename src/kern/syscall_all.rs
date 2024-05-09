@@ -40,7 +40,7 @@ unsafe fn sys_print_cons(s: *const u8, num: u32) -> u32 {
 }
 
 fn sys_getenvid() -> u32 {
-    unsafe { (*CUR_ENV).data.id }
+    unsafe { (*(*CUR_ENV).data).id }
 }
 
 fn sys_yield() -> ! {
@@ -53,7 +53,11 @@ unsafe fn sys_env_destroy(envid: u32) -> u32 {
         return e.into();
     }
     let e = e.unwrap();
-    println!("% {}: Destorying {}", (*CUR_ENV).data.id, (*e).data.id);
+    println!(
+        "% {}: Destorying {}",
+        (*(*CUR_ENV).data).id,
+        (*(*e).data).id
+    );
     env_destory(e);
     0
 }
@@ -64,7 +68,7 @@ unsafe fn sys_set_tlb_mod_entry(envid: u32, func: u32) -> u32 {
         return e.into();
     }
     let e = e.unwrap();
-    (*e).data.user_tlb_mod_entry = func;
+    (*(*e).data).user_tlb_mod_entry = func;
     0
 }
 
@@ -83,7 +87,7 @@ unsafe fn sys_mem_alloc(envid: u32, va: u32, perm: u32) -> u32 {
         return e.into();
     }
     let pp = pp.unwrap();
-    if let Err(e) = page_insert((*e).data.pgdir, va, (*e).data.asid, perm, pp) {
+    if let Err(e) = page_insert((*(*e).data).pgdir, va, (*(*e).data).asid, perm, pp) {
         return e.into();
     }
     0
@@ -107,16 +111,16 @@ unsafe fn sys_mem_map(src_id: u32, src_va: u32, dst_id: u32, dst_va: u32, perm: 
     }
     let dst_env = dst_env.unwrap();
 
-    let r = page_lookup((*src_env).data.pgdir, src_va).ok_or(KError::Invalid);
+    let r = page_lookup((*(*src_env).data).pgdir, src_va).ok_or(KError::Invalid);
     if let Err(e) = r {
         return e.into();
     }
     let (pp, _) = r.unwrap();
 
     if let Err(e) = page_insert(
-        (*dst_env).data.pgdir,
+        (*(*dst_env).data).pgdir,
         dst_va,
-        (*dst_env).data.asid,
+        (*(*dst_env).data).asid,
         perm,
         pp,
     ) {
@@ -136,21 +140,21 @@ unsafe fn sys_mem_unmap(envid: u32, va: u32) -> u32 {
         return e.into();
     }
     let e = e.unwrap();
-    page_remove((*e).data.pgdir, va, (*e).data.asid);
+    page_remove((*(*e).data).pgdir, va, (*(*e).data).asid);
     0
 }
 
 unsafe fn sys_exofork() -> u32 {
-    let e = env_alloc((*CUR_ENV).data.id);
+    let e = env_alloc((*(*CUR_ENV).data).id);
     if let Err(e) = e {
         return e.into();
     }
     let e = e.unwrap();
-    (*e).data.trap_frame = *((KSTACKTOP as *mut TrapFrame).sub(1));
-    (*e).data.trap_frame.regs[2] = 0;
-    (*e).data.status = EnvStatus::NotRunnable;
-    (*e).data.priority = (*CUR_ENV).data.priority;
-    (*e).data.id
+    (*(*e).data).trap_frame = *((KSTACKTOP as *mut TrapFrame).sub(1));
+    (*(*e).data).trap_frame.regs[2] = 0;
+    (*(*e).data).status = EnvStatus::NotRunnable;
+    (*(*e).data).priority = (*(*CUR_ENV).data).priority;
+    (*(*e).data).id
 }
 
 unsafe fn sys_set_env_status(envid: u32, status: EnvStatus) -> u32 {
@@ -163,7 +167,7 @@ unsafe fn sys_set_env_status(envid: u32, status: EnvStatus) -> u32 {
     }
     let e = e.unwrap();
 
-    if (*e).data.status == status {
+    if (*(*e).data).status == status {
         return 0;
     }
 
@@ -173,7 +177,7 @@ unsafe fn sys_set_env_status(envid: u32, status: EnvStatus) -> u32 {
         ENV_SCHE_LIST.remove(e);
     }
 
-    (*e).data.status = status;
+    (*(*e).data).status = status;
     0
 }
 
@@ -193,7 +197,7 @@ unsafe fn sys_set_trapframe(envid: u32, trapframe: *mut TrapFrame) -> u32 {
         ((KSTACKTOP as *mut TrapFrame).sub(1)).write(*trapframe);
         (*trapframe).regs[2]
     } else {
-        (*env).data.trap_frame = *trapframe;
+        (*(*env).data).trap_frame = *trapframe;
         0
     }
 }
@@ -228,28 +232,28 @@ unsafe fn sys_ipc_try_send(envid: u32, value: u32, src_va: u32, perm: u32) -> u3
         return e.into();
     }
     let e = e.unwrap();
-    if !(*e).data.ipc_data.receiving {
+    if !(*(*e).data).ipc_data.receiving {
         return KError::IpcNotRecv.into();
     }
 
-    (*e).data.ipc_data.value = value;
-    (*e).data.ipc_data.from_id = (*CUR_ENV).data.id;
-    (*e).data.ipc_data.perm = perm | PTE_V;
-    (*e).data.ipc_data.receiving = false;
+    (*(*e).data).ipc_data.value = value;
+    (*(*e).data).ipc_data.from_id = (*(*CUR_ENV).data).id;
+    (*(*e).data).ipc_data.perm = perm | PTE_V;
+    (*(*e).data).ipc_data.receiving = false;
 
-    (*e).data.status = EnvStatus::Runnable;
+    (*(*e).data).status = EnvStatus::Runnable;
     ENV_SCHE_LIST.insert_tail(e);
 
     if src_va != 0 {
-        let r = page_lookup((*CUR_ENV).data.pgdir, src_va).ok_or(KError::Invalid);
+        let r = page_lookup((*(*CUR_ENV).data).pgdir, src_va).ok_or(KError::Invalid);
         if let Err(e) = r {
             return e.into();
         }
         let (p, _) = r.unwrap();
         if let Err(e) = page_insert(
-            (*e).data.pgdir,
-            (*e).data.ipc_data.dstva as usize,
-            (*e).data.asid,
+            (*(*e).data).pgdir,
+            (*(*e).data).ipc_data.dstva as usize,
+            (*(*e).data).asid,
             perm,
             p,
         ) {
@@ -266,9 +270,9 @@ unsafe fn sys_ipc_recv(dst_va: u32) -> u32 {
         return KError::Invalid.into();
     }
 
-    (*CUR_ENV).data.ipc_data.receiving = true;
-    (*CUR_ENV).data.ipc_data.dstva = dst_va as u32;
-    (*CUR_ENV).data.status = EnvStatus::NotRunnable;
+    (*(*CUR_ENV).data).ipc_data.receiving = true;
+    (*(*CUR_ENV).data).ipc_data.dstva = dst_va as u32;
+    (*(*CUR_ENV).data).status = EnvStatus::NotRunnable;
     ENV_SCHE_LIST.remove(CUR_ENV);
 
     (*(KSTACKTOP as *mut TrapFrame).sub(1)).regs[2] = 0;

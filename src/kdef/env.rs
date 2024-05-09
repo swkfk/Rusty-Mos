@@ -4,7 +4,7 @@ use crate::kern::{pmap::Pde, trap::TrapFrame};
 
 use super::queue::{LinkList, LinkNode, TailLinkList};
 
-#[repr(i8)]
+#[repr(u32)]
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum EnvStatus {
     #[default]
@@ -13,6 +13,7 @@ pub enum EnvStatus {
     NotRunnable,
 }
 
+#[repr(C)]
 #[derive(Clone, Copy)]
 pub struct IpcData {
     pub value: u32,
@@ -34,14 +35,17 @@ impl IpcData {
     }
 }
 
+#[repr(C)]
 #[derive(Clone, Copy)]
 pub struct EnvData {
     pub trap_frame: TrapFrame,
+    _place_holder_env_link: [u32; 2],
     pub id: u32,
     pub asid: u32,
-    pub pgdir: *mut Pde,
     pub parent_id: u32,
     pub status: EnvStatus,
+    pub pgdir: *mut Pde,
+    _place_holder_env_sched_link: [u32; 2],
     pub priority: u32,
     pub ipc_data: IpcData,
     pub user_tlb_mod_entry: u32,
@@ -61,20 +65,22 @@ impl EnvData {
             ipc_data: IpcData::const_construct(),
             user_tlb_mod_entry: 0,
             env_runs: 0,
+            _place_holder_env_link: [0, 0],
+            _place_holder_env_sched_link: [0, 0],
         }
     }
 }
 
-pub type EnvList = LinkList<EnvData>;
-pub type EnvTailList = TailLinkList<EnvData>;
-pub type EnvNode = LinkNode<EnvData>;
+pub type EnvList = LinkList<*mut EnvData>;
+pub type EnvTailList = TailLinkList<*mut EnvData>;
+pub type EnvNode = LinkNode<*mut EnvData>;
 
 impl EnvNode {
     pub const fn const_construct() -> Self {
         Self {
             next: core::ptr::null_mut(),
             prev: core::ptr::null_mut(),
-            data: EnvData::const_construct(),
+            data: core::ptr::null_mut(),
         }
     }
 }
