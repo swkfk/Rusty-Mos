@@ -28,19 +28,21 @@ extern "C" {
     pub fn handle_reserved(trap_frame: *const TrapFrame);
     pub fn handle_int(trap_frame: *const TrapFrame);
     pub fn handle_tlb(trap_frame: *const TrapFrame);
+    pub fn handle_mod(trap_frame: *const TrapFrame);
+    pub fn handle_sys(trap_frame: *const TrapFrame);
 }
 
 #[export_name = "exception_handlers"]
 pub static EXCEPTION_HANDLERS: [unsafe extern "C" fn(*const TrapFrame); 32] = [
     /*  0 */ handle_int,
-    /*  1 */ handle_reserved,
+    /*  1 */ handle_mod,
     /*  2 */ handle_tlb,
     /*  3 */ handle_tlb,
     /*  4 */ handle_reserved,
     /*  5 */ handle_reserved,
     /*  6 */ handle_reserved,
     /*  7 */ handle_reserved,
-    /*  8 */ handle_reserved,
+    /*  8 */ handle_sys,
     /*  9 */ handle_reserved,
     /* 10 */ handle_reserved,
     /* 11 */ handle_reserved,

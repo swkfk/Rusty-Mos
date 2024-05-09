@@ -22,6 +22,12 @@ pub enum KError {
     IpcNotRecv,
 }
 
+impl From<KError> for u32 {
+    fn from(val: KError) -> Self {
+        -(val as i32) as u32
+    }
+}
+
 /// Error Codes Enum only for **the User's File System**
 pub enum UError {
     /// No free space left on disk
