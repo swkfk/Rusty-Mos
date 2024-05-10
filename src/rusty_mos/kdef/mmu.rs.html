@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/kdef/mmu.rs`."><title>mmu.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (87293c958 2024-05-08)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/kdef/mmu.rs`."><title>mmu.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (8f9080db4 2024-05-09)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -114,7 +114,39 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
-</pre></div><pre class="rust"><code><span class="doccomment">//! Definitions about the memory / page and conventions. Include some helper functions to do the conversion.
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Definitions about the memory / page and conventions. Include some helper
+//! functions to do the conversion.
 //!
 //! The virtual address (**32-bit**) structure is as follows:
 //! ```text
@@ -131,7 +163,8 @@
 
 /// Shifted the *In-Page Offset* out to get the **Page Table Offset**
 </span><span class="kw">pub const </span>PGSHIFT: u8 = <span class="number">12</span>;
-<span class="doccomment">/// Shifted the *Page Table Offset* and *In-Page Offset* out to get the **Page Directory Offset**
+<span class="doccomment">/// Shifted the *Page Table Offset* and *In-Page Offset* out to get the
+/// **Page Directory Offset**
 </span><span class="kw">pub const </span>PDSHIFT: u8 = <span class="number">22</span>;
 <span class="doccomment">/// The maximum count of all the **asid**
 </span><span class="kw">pub const </span>NASID: u32 = <span class="number">256</span>;
@@ -139,40 +172,67 @@
 <span class="doccomment">/// Page table / directory entry flag shift
 </span><span class="kw">const </span>PTE_HARDFLAG_SHIFT: u8 = <span class="number">6</span>;
 
-<span class="doccomment">/// Valid bit. If 0 any address matching this entry will cause a tlb miss exception (TLBL/TLBS).
+<span class="doccomment">/// Global bit. When this bit in a TLB entry is set, that TLB entry will
+/// match solely on the VPN field, regardless of whether the TLB entry’s
+/// ASID field matches the value in EntryHi.
 </span><span class="kw">pub const </span>PTE_G: u32 = <span class="number">0x0001 </span>&lt;&lt; PTE_HARDFLAG_SHIFT;
-<span class="kw">pub const </span>PTE_V: u32 = <span class="number">0x0002 </span>&lt;&lt; PTE_HARDFLAG_SHIFT;
-<span class="kw">pub const </span>PTE_D: u32 = <span class="number">0x0004 </span>&lt;&lt; PTE_HARDFLAG_SHIFT;
-<span class="doccomment">/// Cache Coherency Attributes bit.
+
+<span class="doccomment">/// Valid bit. If 0 any address matching this entry will cause a tlb miss
+/// exception (TLBL/TLBS).
+</span><span class="kw">pub const </span>PTE_V: u32 = <span class="number">0x0002 </span>&lt;&lt; PTE_HARDFLAG_SHIFT;
+
+<span class="doccomment">/// Dirty bit, but really a write-enable bit. 1 to allow writes, 0 and any
+/// store using this translation will cause a tlb mod exception (TLB Mod).
+</span><span class="kw">pub const </span>PTE_D: u32 = <span class="number">0x0004 </span>&lt;&lt; PTE_HARDFLAG_SHIFT;
+
+<span class="doccomment">/// Cache Coherency Attributes bit. If set, this entry is cache-able.
 </span><span class="kw">pub const </span>PTE_C_CACHEABLE: u32 = <span class="number">0x0018 </span>&lt;&lt; PTE_HARDFLAG_SHIFT;
 
-<span class="kw">pub const </span>PAGE_SIZE: usize = <span class="number">1 </span>&lt;&lt; PGSHIFT;
+<span class="doccomment">/// The physical page size (in bytes).
+</span><span class="kw">pub const </span>PAGE_SIZE: usize = <span class="number">1 </span>&lt;&lt; PGSHIFT;
 
-<span class="kw">pub const </span>PDMAP: usize = <span class="number">1 </span>&lt;&lt; PDSHIFT;
-<span class="kw">const </span>PTMAP: usize = PAGE_SIZE;
+<span class="doccomment">/// Bytes mapped by a page directory entry.
+</span><span class="kw">pub const </span>PDMAP: usize = <span class="number">1 </span>&lt;&lt; PDSHIFT;
+<span class="doccomment">/// Bytes mapped by a page table entry (Actually is the PAGE_SIZE).
+</span><span class="kw">const </span>PTMAP: usize = PAGE_SIZE;
 
-<span class="kw">pub const </span>KERNBASE: usize = <span class="number">0x80020000</span>;
+<span class="doccomment">/// Kernel memory starts from here
+</span><span class="kw">pub const </span>KERNBASE: usize = <span class="number">0x80020000</span>;
 
-<span class="kw">pub const </span>KSTACKTOP: usize = ULIM + PDMAP;
-<span class="kw">pub const </span>ULIM: usize = <span class="number">0x80000000</span>;
+<span class="doccomment">/// Kernel stack end at here (the `end` in the linking script).
+</span><span class="kw">pub const </span>KSTACKTOP: usize = ULIM + PDMAP;
 
-<span class="kw">pub const </span>UVPT: usize = ULIM - PDMAP;
-<span class="kw">pub const </span>UPAGES: usize = UVPT - PDMAP;
-<span class="kw">pub const </span>UENVS: usize = UPAGES - PDMAP;
+<span class="doccomment">/// The high-limits of user's memory
+</span><span class="kw">pub const </span>ULIM: usize = <span class="number">0x80000000</span>;
 
-<span class="kw">pub const </span>UTOP: usize = UENVS;
-<span class="kw">pub const </span>UXSTACKTOP: usize = UTOP;
-
-<span class="kw">pub const </span>USTACKTOP: usize = UTOP - <span class="number">2 </span>* PTMAP;
-<span class="kw">pub const </span>UTEXT: usize = PDMAP;
-<span class="kw">pub const </span>UCOW: usize = UTEXT - PTMAP;
-<span class="kw">pub const </span>UTEMP: usize = UCOW - PTMAP;
+<span class="doccomment">/// User's page tables are stored here (for a [PDMAP](crate::kdef::mmu::PDMAP)
+/// size).
+</span><span class="kw">pub const </span>UVPT: usize = ULIM - PDMAP;
+<span class="doccomment">/// The kernel array `PAGES` will be mapped here.
+</span><span class="kw">pub const </span>UPAGES: usize = UVPT - PDMAP;
+<span class="doccomment">/// The kernel array `ENVS` will be mapped here.
+</span><span class="kw">pub const </span>UENVS: usize = UPAGES - PDMAP;
+<span class="doccomment">/// The uer's space higher boundary.
+</span><span class="kw">pub const </span>UTOP: usize = UENVS;
+<span class="doccomment">/// The exception stack top for the user. See also:
+/// [UTOP](crate::kdef::mmu::UTOP)
+</span><span class="kw">pub const </span>UXSTACKTOP: usize = UTOP;
+<span class="doccomment">/// Normal user stack top.
+</span><span class="kw">pub const </span>USTACKTOP: usize = UTOP - <span class="number">2 </span>* PTMAP;
+<span class="doccomment">/// User test segment start.
+</span><span class="kw">pub const </span>UTEXT: usize = PDMAP;
+<span class="doccomment">/// Reserved for COW (start address).
+</span><span class="kw">pub const </span>UCOW: usize = UTEXT - PTMAP;
+<span class="doccomment">/// Reserved for temporary usage (start address).
+</span><span class="kw">pub const </span>UTEMP: usize = UCOW - PTMAP;
 
 <span class="doccomment">/// Get the physical address of the virtual address in **kernel segment**
 ///
 /// Someway the opposite of [KADDR](crate::KADDR)
+///
 /// # Panic
-/// Assertion will fail if the virtual address is not in the **kernel segment**.
+/// Assertion will fail if the virtual address is not in the **kernel
+/// segment**.
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> PADDR {
     (<span class="macro-nonterminal">$x</span>: expr) =&gt; {{
@@ -184,9 +244,11 @@
 <span class="doccomment">/// Get the virtual address (in **kernel segment**) from the physical address
 ///
 /// Someway the opposite of [PADDR](crate::PADDR)
+///
 /// # Panic
 /// **NOT IMPLEMENTED**
-/// Assertion will fail if the virtual address is not in the **kernel segment**.
+/// Assertion will fail if the virtual address is not in the **kernel
+/// segment**.
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> KADDR {
     (<span class="macro-nonterminal">$x</span>: expr) =&gt; {{

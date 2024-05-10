@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/kdef/pmap.rs`."><title>pmap.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (87293c958 2024-05-08)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/kdef/pmap.rs`."><title>pmap.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (8f9080db4 2024-05-09)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -54,9 +54,16 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
-</pre></div><pre class="rust"><code><span class="doccomment">//! Definitions of the conversion macros for the page
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Definitions of the conversion macros for the page.
 
-/// Get the page number through the page object
+/// Get the page number through the page object.
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> page2ppn {
     (<span class="macro-nonterminal">$pp</span>:expr, <span class="macro-nonterminal">$pages</span>:expr; <span class="macro-nonterminal">$t</span>:ty) =&gt; {{
@@ -64,7 +71,7 @@
     }};
 }
 
-<span class="doccomment">/// Get the physical address of the page object
+<span class="doccomment">/// Get the physical address of the page object.
 ///
 /// See also: [pa2page](crate::pa2page)
 </span><span class="attr">#[macro_export]
@@ -74,7 +81,7 @@
     </span>}};
 }
 
-<span class="doccomment">/// Get the kernel virtual address of the page object
+<span class="doccomment">/// Get the kernel virtual address of the page object.
 </span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> page2kva {
     (<span class="macro-nonterminal">$pp</span>:expr, <span class="macro-nonterminal">$pages</span>:expr; <span class="macro-nonterminal">$t</span>:ty) =&gt; {{
@@ -82,7 +89,7 @@
     }};
 }
 
-<span class="doccomment">/// Get the page object of the phisical address
+<span class="doccomment">/// Get the page object of the phisical address.
 ///
 /// See also: [page2pa](crate::page2pa)
 </span><span class="attr">#[macro_export]
@@ -94,7 +101,14 @@
     }};
 }
 
-<span class="attr">#[macro_export]
+<span class="doccomment">/// Get the physical address of the given virtual address. This macro will
+/// look up the page table to do the transmition.
+///
+/// `-1` or `0xffffffff` will be spawned if the address is not found or
+/// the page table entry is invalid.
+///
+/// **ATTENTION**! The address spawned will ignore the in-page offset.
+</span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> va2pa {
     (<span class="macro-nonterminal">$pgdir</span>:expr, <span class="macro-nonterminal">$va</span>:expr) =&gt; {{
         <span class="kw">let </span>pgdir = <span class="macro-nonterminal">$</span><span class="macro">crate::ARRAY_PTR!</span>(<span class="macro-nonterminal">$pgdir</span>; <span class="macro-nonterminal">$</span><span class="macro">crate::PDX!</span>(<span class="macro-nonterminal">$va</span>), <span class="macro-nonterminal">$crate::kern::pmap::Pde</span>);

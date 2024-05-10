@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/kdef/queue.rs`."><title>queue.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (87293c958 2024-05-08)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/kdef/queue.rs`."><title>queue.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.80.0-nightly (8f9080db4 2024-05-09)" data-channel="nightly" data-search-js="search-d52510db62a78183.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -189,6 +189,36 @@
 <a href="#189" id="189">189</a>
 <a href="#190" id="190">190</a>
 <a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Link List implemented with Rust, which is similar to the kernel queue of
 //! the mos / Linux
 //!
@@ -215,30 +245,42 @@
     </span><span class="kw">pub </span>head: <span class="kw-2">*mut </span>LinkNode&lt;T&gt;,
 }
 
-<span class="kw">pub struct </span>TailLinkList&lt;T: Copy&gt; {
+<span class="doccomment">/// The LinkList with its **tail** recorded
+///
+/// See also: [LinkNode]
+///
+/// # Attention
+/// Before use the TailLinkList object, the method `enable` **SHALL** be called
+/// first.
+///
+/// # Generics
+/// The type `T` indicates the data stored in the link list.
+</span><span class="kw">pub struct </span>TailLinkList&lt;T: Copy&gt; {
     <span class="kw">pub </span>head: <span class="kw-2">*mut </span>LinkNode&lt;T&gt;,
     <span class="kw">pub </span>tail: <span class="kw-2">*mut *mut </span>LinkNode&lt;T&gt;,
 }
 
 <span class="doccomment">/// The node struct of the LinkList
 ///
-/// See also: [LinkList]
+/// See also: [LinkList], [TailLinkList]
 ///
 /// # Generics
 /// The type `T` indicates the data stored in the link list.
 </span><span class="attr">#[derive(Clone, Copy)]
 </span><span class="kw">pub struct </span>LinkNode&lt;T: Copy&gt; {
-    <span class="doccomment">/// Pointing the next node. If this is the last node, the field will be null.
+    <span class="doccomment">/// Pointing the next node. If this is the last node, the field will be
+    /// null.
     </span><span class="kw">pub </span>next: <span class="kw-2">*mut </span>LinkNode&lt;T&gt;,
-    <span class="doccomment">/// Pointing the previous node's `next` field.
-    /// If this is the first node, the field will point to the head's `head` field.
+    <span class="doccomment">/// Pointing the previous node's `next` field. If this is the first node,
+    /// the field will point to the head's `head` field.
     </span><span class="kw">pub </span>prev: <span class="kw-2">*mut *mut </span>LinkNode&lt;T&gt;,
     <span class="doccomment">/// The data stored in the link list, with the type `T`.
     </span><span class="kw">pub </span>data: T,
 }
 
 <span class="kw">impl</span>&lt;T: Copy&gt; Default <span class="kw">for </span>LinkList&lt;T&gt; {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Constructor for the default.
+    </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new()
     }
 }
@@ -290,7 +332,8 @@
     <span class="doccomment">/// Remove a specified node from the list contains this node.
     ///
     /// # Safety
-    /// The parameter `item` *SHALL* be mutably-visitable and *SHALL* be in an valid link list!
+    /// The parameter `item` *SHALL* be mutably-visitable and *SHALL* be in an
+    /// valid link list!
     </span><span class="kw">pub unsafe fn </span>remove(item: <span class="kw-2">*mut </span>LinkNode&lt;T&gt;) {
         <span class="kw">if </span>!(<span class="kw-2">*</span>item).next.is_null() {
             (<span class="kw-2">*</span>((<span class="kw-2">*</span>item).next)).prev = (<span class="kw-2">*</span>item).prev;
@@ -302,29 +345,35 @@
 }
 
 <span class="kw">impl</span>&lt;T: Copy&gt; Default <span class="kw">for </span>TailLinkList&lt;T&gt; {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Constructor for the default.
+    </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new()
     }
 }
 
 <span class="kw">impl</span>&lt;T: Copy&gt; TailLinkList&lt;T&gt; {
-    <span class="kw">pub const fn </span>new() -&gt; TailLinkList&lt;T&gt; {
+    <span class="doccomment">/// Create an empty TailLinkList object. Not useable yet.
+    </span><span class="kw">pub const fn </span>new() -&gt; TailLinkList&lt;T&gt; {
         TailLinkList {
             head: null_mut(),
             tail: null_mut(),
         }
     }
 
-    <span class="kw">pub fn </span>empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    <span class="doccomment">/// Judge whether the list is empty.
+    </span><span class="kw">pub fn </span>empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.head.is_null()
     }
 
-    <span class="kw">pub fn </span>enable(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="doccomment">/// Make the list useable after the construction.
+    </span><span class="kw">pub fn </span>enable(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="self">self</span>.tail = <span class="macro">addr_of_mut!</span>(<span class="self">self</span>.head);
     }
 
-    <span class="doccomment">/// # Safety
+    <span class="doccomment">/// Insert the item into the head of the list.
     ///
+    /// # Safety
+    /// The `item` passed **SHALL NOT** be null.
     </span><span class="kw">pub unsafe fn </span>insert_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: <span class="kw-2">*mut </span>LinkNode&lt;T&gt;) {
         (<span class="kw-2">*</span>item).next = <span class="self">self</span>.head;
         <span class="kw">if </span>!(<span class="kw-2">*</span>item).next.is_null() {
@@ -336,8 +385,10 @@
         (<span class="kw-2">*</span>item).prev = <span class="macro">ptr::addr_of_mut!</span>(<span class="self">self</span>.head);
     }
 
-    <span class="doccomment">/// # Safety
+    <span class="doccomment">/// Insert the item into the tail of the list.
     ///
+    /// # Safety
+    /// The `item` passed **SHALL NOT** be null.
     </span><span class="kw">pub unsafe fn </span>insert_tail(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: <span class="kw-2">*mut </span>LinkNode&lt;T&gt;) {
         (<span class="kw-2">*</span>item).next = null_mut();
         (<span class="kw-2">*</span>item).prev = <span class="self">self</span>.tail;
@@ -345,8 +396,14 @@
         <span class="self">self</span>.tail = <span class="macro">ptr::addr_of_mut!</span>((<span class="kw-2">*</span>item).next);
     }
 
-    <span class="doccomment">/// # Safety
+    <span class="doccomment">/// Get the head and remove it if the list is not empty.
     ///
+    /// # Return
+    /// `None` -- The list is empty.
+    /// `Some(item)` -- Otherwise
+    ///
+    /// # Safety
+    /// The list **SHALL** be valid.
     </span><span class="kw">pub unsafe fn </span>pop_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">*mut </span>LinkNode&lt;T&gt;&gt; {
         <span class="kw">match </span><span class="self">self</span>.empty() {
             <span class="bool-val">true </span>=&gt; <span class="prelude-val">None</span>,
@@ -358,8 +415,11 @@
         }
     }
 
-    <span class="doccomment">/// # Safety
+    <span class="doccomment">/// Remove a specified node from the list contains this node.
     ///
+    /// # Safety
+    /// The parameter `item` *SHALL* be mutably-visitable and *SHALL* be in an
+    /// valid link list!
     </span><span class="kw">pub unsafe fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: <span class="kw-2">*mut </span>LinkNode&lt;T&gt;) {
         <span class="kw">if </span>!(<span class="kw-2">*</span>item).next.is_null() {
             (<span class="kw-2">*</span>((<span class="kw-2">*</span>item).next)).prev = (<span class="kw-2">*</span>item).prev;
