@@ -1,3 +1,5 @@
+//! Define all the status bits for the cp0 reg.
+
 pub const STATUS_CU3: u32 = 0x80000000;
 pub const STATUS_CU2: u32 = 0x40000000;
 pub const STATUS_CU1: u32 = 0x20000000;
