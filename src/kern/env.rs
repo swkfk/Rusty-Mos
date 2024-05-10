@@ -1,3 +1,5 @@
+//! Core methods for the env module.
+
 use core::{
     mem::size_of,
     ptr::{self, addr_of, addr_of_mut, copy_nonoverlapping, null_mut},
@@ -29,20 +31,31 @@ use super::{
     trap::TrapFrame,
 };
 
+/// Wrapper to make it aligned to a page.
 #[repr(align(4096))]
 pub struct EnvsWrapper<T>([T; NENV]);
 
+/// The global pgdir.
 pub static mut BASE_PGDIR: *mut Pde = null_mut();
 
+/// The current env.
 pub static mut CUR_ENV: *mut EnvNode = null_mut();
 
+/// Free env list.
 pub static mut ENV_FREE_LIST: EnvList = EnvList::new();
+/// Runnable env list.
 pub static mut ENV_SCHE_LIST: EnvTailList = EnvTailList::new();
+/// The envs array in *kernel*, mapped to the [UENVS] and used by the user
+/// program.
 pub static mut ENVS_DATA: EnvsWrapper<EnvData> = EnvsWrapper([EnvData::const_construct(); NENV]);
+/// The envs array used in the *kernel* space. The element in it has the link
+/// field to make it a link node.
 pub static mut ENVS: EnvsWrapper<EnvNode> = EnvsWrapper([EnvNode::const_construct(); NENV]);
 
+/// Bitmap for the asid allocatoin.
 pub static mut ASID_BITMAP: [u32; (NASID / 32) as usize] = [0; (NASID / 32) as usize];
 
+/// Alloc a new asid. Return an error if there is no asid remained.
 fn asid_alloc() -> Result<u32, KError> {
     for i in 0..NASID as usize {
         let index = i >> 5;
@@ -57,14 +70,22 @@ fn asid_alloc() -> Result<u32, KError> {
     Err(KError::NoFreeEnv)
 }
 
+/// Free an asid.
 fn asid_free(i: u32) {
     let index = i as usize >> 5;
     let inner = i & 31;
     unsafe { ASID_BITMAP[index] &= !(1 << inner) };
 }
 
-/// # Safety
+/// Map the [va, va + size) in virtual address space to the [pa, pa + size) in
+/// physical address space if `pgdir`. This method will validate the entry perm.
 ///
+/// # Panic
+/// - Panic if one of the `pa`, `va`, `size` is not aligned to a [PAGE_SIZE].
+/// - Panic if the [page_insert] failed.
+///
+/// # Safety
+/// The `pgdir` **SHALL** be valid.
 unsafe fn map_segment(pgdir: *mut Pde, asid: u32, pa: usize, va: usize, size: usize, perm: u32) {
     assert_eq!(0, pa % PAGE_SIZE);
     assert_eq!(0, va % PAGE_SIZE);
@@ -78,8 +99,10 @@ unsafe fn map_segment(pgdir: *mut Pde, asid: u32, pa: usize, va: usize, size: us
     }
 }
 
+/// The static variable used by [mkenvid];
 static mut ENV_I: u32 = 0;
 
+/// Get the envid with the env node.
 fn mkenvid(e: *mut EnvNode) -> u32 {
     unsafe {
         ENV_I += 1;
@@ -87,6 +110,8 @@ fn mkenvid(e: *mut EnvNode) -> u32 {
     }
 }
 
+/// Init the env environment. Put the envs into the free list, and map the PAGES
+/// and ENVS to base_pgdir's UPAGES and UENVS accordingly.
 pub fn env_init() {
     unsafe {
         debugln!("> env_init: enable the tailq ENV_SCHE_LIST");
@@ -130,8 +155,13 @@ pub fn env_init() {
     debugln!("> env.rs: env init sucsess");
 }
 
-/// # Safety
+/// Setup the virtual memory of the new-born env.
 ///
+/// # Return
+/// A [KError] wrapper with `Err` will be returned if the page_alloc fails.
+///
+/// # Safety
+/// The `env` **SHALL** be valid.
 pub unsafe fn env_setup_vm(env: *mut EnvNode) -> Result<(), KError> {
     let p = page_alloc()?;
 
@@ -153,8 +183,18 @@ pub unsafe fn env_setup_vm(env: *mut EnvNode) -> Result<(), KError> {
     Ok(())
 }
 
-/// # Safety
+/// Alloc an `env` and setup its vm and PCB.
 ///
+/// # Return
+///
+/// If there is at least one free env, and the [env_setup_vm] works well, the
+/// raw pointer to the new env will be returned with a `Ok` wrapper.
+///
+/// Otherwise, a [KError] with a `Err` wrapper will be returned if there is no
+/// free env ([KError::NoFreeEnv]) or `env_setup_vm` fails.
+///
+/// # Safety
+/// The env got in the free list **SHALL** be valid.
 pub unsafe fn env_alloc(parent_id: u32) -> Result<*mut EnvNode, KError> {
     let e = ENV_FREE_LIST.pop_head().ok_or(KError::NoFreeEnv)?;
     env_setup_vm(e)?;
@@ -170,8 +210,11 @@ pub unsafe fn env_alloc(parent_id: u32) -> Result<*mut EnvNode, KError> {
     Ok(e)
 }
 
-/// # Safety
+/// Free an env, and remove all its pages. The TLB will be flushed after the
+/// deletion of pages.
 ///
+/// # Safety
+/// The `env` and all its pages **SHALL** be valid.
 pub unsafe fn env_free(env: *mut EnvNode) {
     println!(
         "% {}: Free env {}",
@@ -215,8 +258,10 @@ pub unsafe fn env_free(env: *mut EnvNode) {
     ENV_FREE_LIST.insert_head(env);
 }
 
-/// # Safety
+/// Destory an env and free it. Re-schedule will be performed.
 ///
+/// # Safety
+/// The `env` and all its pages **SHALL** be valid.
 pub unsafe fn env_destory(env: *mut EnvNode) {
     env_free(env);
 
@@ -227,8 +272,12 @@ pub unsafe fn env_destory(env: *mut EnvNode) {
     }
 }
 
-/// # Safety
+/// Get the env's PCB by its id. If `checkperm` is set, the method will check
+/// whether the env just is [CUR_ENV] or the child of CUR_ENV. If not,
+/// [KError::BadEnv] will be returned with a `Err` wrapper.
 ///
+/// # Safety
+/// The `e` get by index **SHELL** be valid.
 pub unsafe fn envid2env(envid: u32, checkperm: bool) -> Result<*mut EnvNode, KError> {
     if 0 == envid {
         return Ok(CUR_ENV);
@@ -250,8 +299,10 @@ pub unsafe fn envid2env(envid: u32, checkperm: bool) -> Result<*mut EnvNode, KEr
     }
 }
 
-/// # Safety
+/// Load the icode for the `e`.
 ///
+/// # Safety
+/// The `binary` **SHALL** be readable for `size` bytes.
 pub unsafe fn load_icode(e: *mut EnvNode, binary: *const u8, size: usize) {
     let mapper = |env: *const EnvNode,
                   va: usize,
@@ -286,8 +337,10 @@ pub unsafe fn load_icode(e: *mut EnvNode, binary: *const u8, size: usize) {
     (*(*e).data).trap_frame.cp0_epc = (*ehdr).entry;
 }
 
-/// # Safety
+/// Create an env and load the icode, set the priority. For **tests** mainly.
 ///
+/// # Safety
+/// The `binary` **SHALL** be readable for `size` bytes.
 pub unsafe fn env_create(binary: *const u8, size: usize, priority: u32) -> Option<*mut EnvNode> {
     let e = env_alloc(0).ok()?;
 
@@ -301,14 +354,17 @@ pub unsafe fn env_create(binary: *const u8, size: usize, priority: u32) -> Optio
 }
 
 extern "C" {
+    /// Recover from exception, load the specified **TrapFrame**.
     pub fn env_pop_tf(_1: *const TrapFrame, _2: u32) -> !;
 }
 
 /// Run before the `env_run` for **tests** only
 pub static mut PRE_ENV_RUN: fn(*mut EnvNode) = |_| {};
 
-/// # Safety
+/// Run the env. Save the [CUR_ENV]'s trapframe if `CUR_ENV` exists.
 ///
+/// # Safety
+/// The `env` **SHALL** be valid and runnable.
 pub unsafe fn env_run(env: *mut EnvNode) -> ! {
     assert_eq!(
         EnvStatus::Runnable,
