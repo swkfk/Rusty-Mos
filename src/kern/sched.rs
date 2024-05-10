@@ -1,11 +1,30 @@
+//! Do the schedule job.
+
 use crate::kdef::env::EnvStatus;
 
 use super::env::{env_run, CUR_ENV, ENV_SCHE_LIST};
 
+/// Record the env's rest time-slice for scheduling.
 static mut ENV_REST_COUNT: u32 = 0;
 
-/// # Safety
+/// Schedule the envs. If `yield`, the current env will be moved to the tail
+/// of the schedule list. Otherwise, the strategy will judge the rest time the
+/// env will enjoy.
 ///
+/// We use the priority to represent the time-slice count of a env. If the count
+/// run out, the next env will be selected.
+///
+/// # Return
+/// The function is a *no-return* function.
+/// [env_run](rusty_mos::kern::env::env_run) will run the selected env.
+///
+/// # Panic
+///
+/// The list is empty when we should pick one env to run. Only in this
+/// situation, a panic will be raised.
+///
+/// # Safety
+/// Actually, the list and the current env pointer **SHALL** be valid.
 #[no_mangle]
 pub unsafe fn schedule(r#yield: bool) -> ! {
     let mut env = CUR_ENV;

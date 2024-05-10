@@ -10,8 +10,14 @@ use crate::{
     ROUNDDOWN,
 };
 
-/// # Safety
+/// Load an elf-format binary file in memory. This method will map all sections
+/// to correct virtual address.
 ///
+/// An KError will be transmitted if the `map_segment` failed.
+///
+/// # Safety
+/// The raw ptr **SHALL** be readable in all loadable sections and the phdr
+/// **SHALL** be valid.
 pub unsafe fn elf_load_seg(
     ph: *const Elf32Phdr,
     bin: *const u8,
@@ -22,11 +28,13 @@ pub unsafe fn elf_load_seg(
     let bin_size = (*ph).filesz;
     let seg_size = (*ph).memsz;
 
+    // Load the perm. Place the dirty bit acording the section attribute.
     let mut perm = PTE_V;
     if (*ph).flags & PF_W > 0 {
         perm |= PTE_D;
     }
 
+    // Map the unaligned data at head.
     let offset = va - ROUNDDOWN!(va; PAGE_SIZE as u32);
     if offset != 0 {
         map_page(
@@ -57,6 +65,7 @@ pub unsafe fn elf_load_seg(
         i += PAGE_SIZE;
     }
 
+    // `bin_size` < `sgsize`
     while i < seg_size as usize {
         map_page(
             data,
