@@ -24,6 +24,16 @@ pub struct LinkList<T: Copy> {
     pub head: *mut LinkNode<T>,
 }
 
+/// The LinkList with its **tail** recorded
+///
+/// See also: [LinkNode]
+///
+/// # Attention
+/// Before use the TailLinkList object, the method `enable` **SHALL** be called
+/// first.
+///
+/// # Generics
+/// The type `T` indicates the data stored in the link list.
 pub struct TailLinkList<T: Copy> {
     pub head: *mut LinkNode<T>,
     pub tail: *mut *mut LinkNode<T>,
@@ -31,22 +41,24 @@ pub struct TailLinkList<T: Copy> {
 
 /// The node struct of the LinkList
 ///
-/// See also: [LinkList]
+/// See also: [LinkList], [TailLinkList]
 ///
 /// # Generics
 /// The type `T` indicates the data stored in the link list.
 #[derive(Clone, Copy)]
 pub struct LinkNode<T: Copy> {
-    /// Pointing the next node. If this is the last node, the field will be null.
+    /// Pointing the next node. If this is the last node, the field will be
+    /// null.
     pub next: *mut LinkNode<T>,
-    /// Pointing the previous node's `next` field.
-    /// If this is the first node, the field will point to the head's `head` field.
+    /// Pointing the previous node's `next` field. If this is the first node,
+    /// the field will point to the head's `head` field.
     pub prev: *mut *mut LinkNode<T>,
     /// The data stored in the link list, with the type `T`.
     pub data: T,
 }
 
 impl<T: Copy> Default for LinkList<T> {
+    /// Constructor for the default.
     fn default() -> Self {
         Self::new()
     }
@@ -99,7 +111,8 @@ impl<T: Copy> LinkList<T> {
     /// Remove a specified node from the list contains this node.
     ///
     /// # Safety
-    /// The parameter `item` *SHALL* be mutably-visitable and *SHALL* be in an valid link list!
+    /// The parameter `item` *SHALL* be mutably-visitable and *SHALL* be in an
+    /// valid link list!
     pub unsafe fn remove(item: *mut LinkNode<T>) {
         if !(*item).next.is_null() {
             (*((*item).next)).prev = (*item).prev;
@@ -111,12 +124,14 @@ impl<T: Copy> LinkList<T> {
 }
 
 impl<T: Copy> Default for TailLinkList<T> {
+    /// Constructor for the default.
     fn default() -> Self {
         Self::new()
     }
 }
 
 impl<T: Copy> TailLinkList<T> {
+    /// Create an empty TailLinkList object. Not useable yet.
     pub const fn new() -> TailLinkList<T> {
         TailLinkList {
             head: null_mut(),
@@ -124,16 +139,20 @@ impl<T: Copy> TailLinkList<T> {
         }
     }
 
+    /// Judge whether the list is empty.
     pub fn empty(&self) -> bool {
         self.head.is_null()
     }
 
+    /// Make the list useable after the construction.
     pub fn enable(&mut self) {
         self.tail = addr_of_mut!(self.head);
     }
 
-    /// # Safety
+    /// Insert the item into the head of the list.
     ///
+    /// # Safety
+    /// The `item` passed **SHALL NOT** be null.
     pub unsafe fn insert_head(&mut self, item: *mut LinkNode<T>) {
         (*item).next = self.head;
         if !(*item).next.is_null() {
@@ -145,8 +164,10 @@ impl<T: Copy> TailLinkList<T> {
         (*item).prev = ptr::addr_of_mut!(self.head);
     }
 
-    /// # Safety
+    /// Insert the item into the tail of the list.
     ///
+    /// # Safety
+    /// The `item` passed **SHALL NOT** be null.
     pub unsafe fn insert_tail(&mut self, item: *mut LinkNode<T>) {
         (*item).next = null_mut();
         (*item).prev = self.tail;
@@ -154,8 +175,14 @@ impl<T: Copy> TailLinkList<T> {
         self.tail = ptr::addr_of_mut!((*item).next);
     }
 
-    /// # Safety
+    /// Get the head and remove it if the list is not empty.
     ///
+    /// # Return
+    /// `None` -- The list is empty.
+    /// `Some(item)` -- Otherwise
+    ///
+    /// # Safety
+    /// The list **SHALL** be valid.
     pub unsafe fn pop_head(&mut self) -> Option<*mut LinkNode<T>> {
         match self.empty() {
             true => None,
@@ -167,8 +194,11 @@ impl<T: Copy> TailLinkList<T> {
         }
     }
 
-    /// # Safety
+    /// Remove a specified node from the list contains this node.
     ///
+    /// # Safety
+    /// The parameter `item` *SHALL* be mutably-visitable and *SHALL* be in an
+    /// valid link list!
     pub unsafe fn remove(&mut self, item: *mut LinkNode<T>) {
         if !(*item).next.is_null() {
             (*((*item).next)).prev = (*item).prev;

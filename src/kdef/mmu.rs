@@ -68,7 +68,7 @@ pub const UENVS: usize = UPAGES - PDMAP;
 /// The uer's space higher boundary.
 pub const UTOP: usize = UENVS;
 /// The exception stack top for the user. See also:
-/// [UTOP](crate::kdef::mmu::UTOP).
+/// [UTOP](crate::kdef::mmu::UTOP)
 pub const UXSTACKTOP: usize = UTOP;
 /// Normal user stack top.
 pub const USTACKTOP: usize = UTOP - 2 * PTMAP;

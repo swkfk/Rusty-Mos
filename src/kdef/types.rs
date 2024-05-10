@@ -1,6 +1,6 @@
-//! Definition of some misc macros about type and offset
+//! Definition of some misc macros about type and offset.
 
-/// Round-up to the specified fractor
+/// Round-up to the specified fractor.
 ///
 /// **REQUIREMENT**: `$n` is **the power of 2**, such 4, 8, 16, etc.
 #[macro_export]
@@ -10,6 +10,9 @@ macro_rules! ROUND {
     };
 }
 
+/// Round-down to the specified fractor.
+///
+/// /// **REQUIREMENT**: `$n` is **the power of 2**, such 4, 8, 16, etc.
 #[macro_export]
 macro_rules! ROUNDDOWN {
     ($x: expr; $n: expr) => {
@@ -17,7 +20,7 @@ macro_rules! ROUNDDOWN {
     };
 }
 
-/// Get the array\[i\] via the raw pointer
+/// Get the array\[i\] via the raw pointer.
 ///
 /// The `$i` is the index of the target element, starting from **zero**.
 /// The `$t` is the array elements' type.

@@ -1,6 +1,6 @@
-//! Definitions of the conversion macros for the page
+//! Definitions of the conversion macros for the page.
 
-/// Get the page number through the page object
+/// Get the page number through the page object.
 #[macro_export]
 macro_rules! page2ppn {
     ($pp:expr, $pages:expr; $t:ty) => {{
@@ -8,7 +8,7 @@ macro_rules! page2ppn {
     }};
 }
 
-/// Get the physical address of the page object
+/// Get the physical address of the page object.
 ///
 /// See also: [pa2page](crate::pa2page)
 #[macro_export]
@@ -18,7 +18,7 @@ macro_rules! page2pa {
     }};
 }
 
-/// Get the kernel virtual address of the page object
+/// Get the kernel virtual address of the page object.
 #[macro_export]
 macro_rules! page2kva {
     ($pp:expr, $pages:expr; $t:ty) => {{
@@ -26,7 +26,7 @@ macro_rules! page2kva {
     }};
 }
 
-/// Get the page object of the phisical address
+/// Get the page object of the phisical address.
 ///
 /// See also: [page2pa](crate::page2pa)
 #[macro_export]
@@ -38,6 +38,13 @@ macro_rules! pa2page {
     }};
 }
 
+/// Get the physical address of the given virtual address. This macro will
+/// look up the page table to do the transmition.
+///
+/// `-1` or `0xffffffff` will be spawned if the address is not found or
+/// the page table entry is invalid.
+///
+/// **ATTENTION**! The address spawned will ignore the in-page offset.
 #[macro_export]
 macro_rules! va2pa {
     ($pgdir:expr, $va:expr) => {{
