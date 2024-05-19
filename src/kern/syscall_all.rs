@@ -16,6 +16,7 @@ use crate::{
 
 use super::{
     env::{env_alloc, envid2env, CUR_ENV, ENV_SCHE_LIST},
+    io::{ioread_into_va, iowrite_from_va},
     machine::{print_charc, scan_charc},
     pmap::{page_alloc, page_insert, page_lookup, page_remove},
     sched::schedule,
@@ -288,12 +289,46 @@ fn sys_cgetc() -> u8 {
     }
 }
 
-fn sys_write_dev(_va: u32, _pa: u32, _len: u32) -> u32 {
-    unimplemented!()
+fn sys_write_dev(va: u32, pa: u32, len: u32) -> u32 {
+    let va = va as usize;
+    let pa = pa as usize;
+    let len = len as usize;
+    if va.checked_add(len).is_none() || va < UTEMP || va + len > UTOP {
+        return KError::Invalid.into();
+    }
+    if !(0x180003f8 <= pa && pa + len <= 0x180003f8 + 0x20
+        || 0x180001f0 <= pa && pa + len <= 0x180001f0 + 0x8)
+    {
+        return KError::Invalid.into();
+    }
+    match len {
+        1 => iowrite_from_va::<u8>(pa, va),
+        2 => iowrite_from_va::<u16>(pa, va),
+        4 => iowrite_from_va::<u32>(pa, va),
+        _ => return KError::Invalid.into(),
+    }
+    0
 }
 
-fn sys_read_dev(_va: u32, _pa: u32, _len: u32) -> u32 {
-    unimplemented!()
+fn sys_read_dev(va: u32, pa: u32, len: u32) -> u32 {
+    let va = va as usize;
+    let pa = pa as usize;
+    let len = len as usize;
+    if va.checked_add(len).is_none() || va < UTEMP || va + len > UTOP {
+        return KError::Invalid.into();
+    }
+    if !(0x180003f8 <= pa && pa + len <= 0x180003f8 + 0x20
+        || 0x180001f0 <= pa && pa + len <= 0x180001f0 + 0x8)
+    {
+        return KError::Invalid.into();
+    }
+    match len {
+        1 => ioread_into_va::<u8>(pa, va),
+        2 => ioread_into_va::<u16>(pa, va),
+        4 => ioread_into_va::<u32>(pa, va),
+        _ => return KError::Invalid.into(),
+    }
+    0
 }
 
 type SyscallRawPtr = *const ();

@@ -78,6 +78,8 @@ pub const UTEXT: usize = PDMAP;
 pub const UCOW: usize = UTEXT - PTMAP;
 /// Reserved for temporary usage (start address).
 pub const UTEMP: usize = UCOW - PTMAP;
+/// KSEG1 Segment
+pub const KSEG1: usize = 0xA0000000;
 
 /// Get the physical address of the virtual address in **kernel segment**
 ///

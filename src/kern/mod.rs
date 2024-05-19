@@ -1,5 +1,6 @@
 pub mod elf;
 pub mod env;
+pub mod io;
 pub mod machine;
 pub mod pmap;
 pub mod sched;
