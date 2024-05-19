@@ -58,6 +58,27 @@ fn handle_run_env() {
             load_icode(&include_file, "pingpong", "pingpong_strong");
             create_env(&include_file, "pingpong", 20);
         }
+        "fs_check" => {
+            load_icode(&include_file, "fs_check", "fs_check");
+            create_env(&include_file, "fs_check", 1);
+        }
+        "mix_check" => {
+            load_icode(&include_file, "mix_check", "mix_check");
+            create_env(&include_file, "mix_check", 1);
+        }
+        "serv_check" => {
+            load_icode(&include_file, "serv_check", "serv_check");
+            load_icode(&include_file, "fs_serv", "fs_serv");
+            create_env(&include_file, "serv_check", 1);
+            create_env(&include_file, "fs_serv", 1);
+        }
+        "fs_strong_check" => {
+            // Pay attention, the disk is different!
+            load_icode(&include_file, "fs_strong_check", "fs_strong_check");
+            load_icode(&include_file, "fs_serv", "fs_serv");
+            create_env(&include_file, "fs_strong_check", 1);
+            create_env(&include_file, "fs_serv", 1);
+        }
         _ => unreachable!(),
     }
     let _ = include_file.write("}\n".as_bytes()).unwrap();

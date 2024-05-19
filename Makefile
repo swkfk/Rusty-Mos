@@ -1,5 +1,10 @@
 target_path             = target/mipsel-unknown-none
 mos_elf                 = $(target_path)/debug/rusty_mos
+
+disk_path               = src/ktests/disk
+user_disk               := $(disk_path)/fs.img
+empty_disk              := $(disk_path)/empty.img
+
 QEMU                    = qemu-system-mipsel
 QEMU_FLAGS              += -cpu 24Kc -m 64 -nographic -M malta \
 						$(shell [ -f '$(user_disk)' ] && echo '-drive id=ide0,file=$(user_disk),if=ide,format=raw ')\
