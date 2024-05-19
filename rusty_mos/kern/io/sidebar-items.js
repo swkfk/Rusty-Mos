@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["ioread_into_va","iowrite_from_va"]};
