@@ -42,7 +42,6 @@ pub extern "C" fn rust_mips_init(
     println!("Transplanted From the C-Edition Mos of BUAA OS Course");
 
     println!("Ram low size={}", ram_low_size);
-    println!();
 
     let memsize = ram_low_size as usize;
     let mut freemem: usize = 0;

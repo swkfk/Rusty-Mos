@@ -216,7 +216,7 @@ pub unsafe fn env_alloc(parent_id: u32) -> Result<*mut EnvNode, KError> {
 /// # Safety
 /// The `env` and all its pages **SHALL** be valid.
 pub unsafe fn env_free(env: *mut EnvNode) {
-    println!(
+    debugln!(
         "% {}: Free env {}",
         if CUR_ENV.is_null() {
             0
@@ -267,7 +267,7 @@ pub unsafe fn env_destory(env: *mut EnvNode) {
 
     if CUR_ENV == env {
         CUR_ENV = null_mut();
-        println!("% Killed.");
+        debugln!("% Killed.");
         schedule(true);
     }
 }

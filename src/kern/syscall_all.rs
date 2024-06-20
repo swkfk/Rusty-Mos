@@ -4,6 +4,7 @@ use core::{
 };
 
 use crate::{
+    debugln,
     kdef::{
         env::EnvStatus,
         error::KError,
@@ -11,7 +12,6 @@ use crate::{
         syscall::MAX_SYS_NO,
     },
     kern::env::env_destory,
-    println,
 };
 
 use super::{
@@ -54,7 +54,7 @@ unsafe fn sys_env_destroy(envid: u32) -> u32 {
         return e.into();
     }
     let e = e.unwrap();
-    println!(
+    debugln!(
         "% {}: Destorying {}",
         (*(*CUR_ENV).data).id,
         (*(*e).data).id
