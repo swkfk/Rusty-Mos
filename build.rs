@@ -79,6 +79,12 @@ fn handle_run_env() {
             create_env(&include_file, "fs_strong_check", 1);
             create_env(&include_file, "fs_serv", 1);
         }
+        "mos" => {
+            load_icode(&include_file, "user_icode", "icode");
+            load_icode(&include_file, "fs_serv", "serv");
+            create_env(&include_file, "user_icode", 1);
+            create_env(&include_file, "fs_serv", 1);
+        }
         _ => unreachable!(),
     }
     let _ = include_file.write("}\n".as_bytes()).unwrap();
