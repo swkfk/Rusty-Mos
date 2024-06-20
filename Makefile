@@ -1,7 +1,7 @@
 target_path             = target/mipsel-unknown-none
 mos_elf                 = $(target_path)/debug/rusty_mos
 
-disk_path               = src/ktests/disk
+disk_path               = target/user
 user_disk               := $(disk_path)/fs.img
 empty_disk              := $(disk_path)/empty.img
 
@@ -22,7 +22,8 @@ CARGO_BUILD = $(CARGO) build $(CARGO_TARGET)
 .PHONY: build, clean, doc
 
 build:
-	$(CARGO_BUILD)
+	MOS_USER=1 $(MAKE) --directory=mos_user
+	MOS_TEST=run_env MOS_RUN_ENV=mos $(CARGO_BUILD)
 
 test:
 	MOS_TEST=$(item) $(CARGO_BUILD)
@@ -38,6 +39,7 @@ dbg_run:
 
 clean:
 	$(CARGO) clean
+	MOS_USER=1 $(MAKE) --directory=mos_user clean
 
 doc:
 	$(CARGO) doc $(CARGO_TARGET) $(CARGO_ZBUILD)

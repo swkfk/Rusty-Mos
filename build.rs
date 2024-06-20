@@ -80,8 +80,8 @@ fn handle_run_env() {
             create_env(&include_file, "fs_serv", 1);
         }
         "mos" => {
-            load_icode(&include_file, "user_icode", "icode");
-            load_icode(&include_file, "fs_serv", "serv");
+            load_icode_shell(&include_file, "user_icode", "icode");
+            load_icode_shell(&include_file, "fs_serv", "serv");
             create_env(&include_file, "user_icode", 1);
             create_env(&include_file, "fs_serv", 1);
         }
@@ -95,6 +95,18 @@ fn load_icode(mut file: &fs::File, ident: &str, filename: &str) {
         .write(
             format!(
                 "    let {} = include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/src/ktests/bin/{}.b\"));\n",
+                ident, filename
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+}
+
+fn load_icode_shell(mut file: &fs::File, ident: &str, filename: &str) {
+    let _ = file
+        .write(
+            format!(
+                "    let {} = include_bytes!(concat!(env!(\"CARGO_MANIFEST_DIR\"), \"/target/user/{}.b\"));\n",
                 ident, filename
             )
             .as_bytes(),

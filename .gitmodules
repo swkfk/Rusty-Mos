@@ -1,0 +1,3 @@
+[submodule "mos_user"]
+	path = mos_user
+	url = git@github.com:swkfk/Mos-User.git
