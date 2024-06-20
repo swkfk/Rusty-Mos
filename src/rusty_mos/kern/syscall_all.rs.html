@@ -380,6 +380,7 @@
 };
 
 <span class="kw">use crate</span>::{
+    debugln,
     kdef::{
         env::EnvStatus,
         error::KError,
@@ -387,7 +388,6 @@
         syscall::MAX_SYS_NO,
     },
     kern::env::env_destory,
-    println,
 };
 
 <span class="kw">use super</span>::{
@@ -430,7 +430,7 @@
         <span class="kw">return </span>e.into();
     }
     <span class="kw">let </span>e = e.unwrap();
-    <span class="macro">println!</span>(
+    <span class="macro">debugln!</span>(
         <span class="string">"% {}: Destorying {}"</span>,
         (<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).id,
         (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).id
