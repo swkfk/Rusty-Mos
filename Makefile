@@ -1,5 +1,10 @@
 target_path             = target/mipsel-unknown-none
-mos_elf                 = $(target_path)/debug/rusty_mos
+
+ifneq ($(MOS_RELEASE),)
+	mos_elf             = $(target_path)/release/rusty_mos
+else
+	mos_elf             = $(target_path)/debug/rusty_mos
+endif
 
 disk_path               = target/user
 user_disk               := $(disk_path)/fs.img
@@ -14,8 +19,13 @@ QEMU_FLAGS              += -cpu 24Kc -m 64 -nographic -M malta \
 CARGO                   = cargo
 CARGO_TARGET            += --target mipsel-unknown-none
 CARGO_ZBUILD            += -Zbuild-std=core,alloc
+CARGO_FLAG              = 
 
-CARGO_BUILD = $(CARGO) build $(CARGO_TARGET)
+ifneq ($(MOS_RELEASE),)
+	CARGO_FLAG += --release
+endif
+
+CARGO_BUILD = $(CARGO) build $(CARGO_TARGET) $(CARGO_FLAG)
 
 .all: build
 
@@ -31,10 +41,10 @@ test:
 env:
 	MOS_TEST=run_env MOS_RUN_ENV=$(item) $(CARGO_BUILD)
 
-run:
+run: build
 	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)
 
-dbg_run:
+dbg_run: build
 	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf) -s -S
 
 clean:
