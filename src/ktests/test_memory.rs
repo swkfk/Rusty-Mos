@@ -329,8 +329,8 @@ pub fn test_tlb_refill() {
 pub fn test_linklist() {
     use crate::println;
     use core::ptr::addr_of_mut;
-    type LinkList = crate::kdef::queue::LinkList<u32>;
-    type LinkNode = crate::kdef::queue::LinkNode<u32>;
+    type LinkList = crate::utils::linked_list::LinkList<u32>;
+    type LinkNode = crate::utils::linked_list::LinkNode<u32>;
 
     let mut ll = LinkList::new();
     assert!(ll.empty());

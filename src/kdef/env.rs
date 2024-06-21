@@ -5,7 +5,7 @@ use core::ptr::null_mut;
 
 use crate::kern::{pmap::Pde, trap::TrapFrame};
 
-use super::queue::{LinkList, LinkNode, TailLinkList};
+use crate::utils::linked_list::{LinkList, LinkNode, TailLinkList};
 
 /// The env status enum. Compatible with the C-Like memory structure.
 #[repr(u32)]

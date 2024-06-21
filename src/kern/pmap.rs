@@ -1,11 +1,11 @@
 use core::{mem::size_of, ptr};
 
+use crate::utils::linked_list::{LinkList, LinkNode};
 use crate::{
     debugln,
     kdef::{
         error::KError,
         mmu::{PGSHIFT, PTE_C_CACHEABLE, PTE_V},
-        queue::{LinkList, LinkNode},
     },
     pa2page, page2kva, page2pa, println, ARRAY_PTR, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
