@@ -72,7 +72,7 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
                 page = page.add(1 << j);
                 self.free_list[j].insert_head(page);
             }
-            let kva = page2kva!(allocated, PAGES; PageNode);
+            let kva = page2kva!(allocated, *PAGES.borrow(); PageNode);
             debugln!(
                 "> ALLOC: allocated: page at 0x{:x}, kva at 0x{:x}",
                 allocated as usize,
@@ -85,7 +85,7 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
     }
 
     unsafe fn dealloc(&mut self, ptr: *mut u8, layout: core::alloc::Layout) {
-        let p = pa2page!(PADDR!(ptr as usize), PAGES; PageNode) as *mut PageNode;
+        let p = pa2page!(PADDR!(ptr as usize), *PAGES.borrow(); PageNode) as *mut PageNode;
         let mut page_index = p.offset_from(self.page_start) as usize;
         let page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
         let page_count = max(page_count, 1);

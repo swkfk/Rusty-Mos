@@ -1,3 +1,4 @@
+use core::cell::{Ref, RefCell, RefMut};
 use core::{mem::size_of, ptr};
 
 use crate::utils::linked_list::{LinkList, LinkNode};
@@ -12,11 +13,25 @@ use crate::{
 
 use super::tlbex::tlb_invalidate;
 
-pub static mut CUR_PGDIR: *mut Pde = ptr::null_mut();
-pub static mut PAGES: *mut PageNode = core::ptr::null_mut();
-pub static mut PAGE_FREE_LIST: PageList = PageList::new();
-pub static mut KERNEL_HEAP: *mut PageNode = core::ptr::null_mut();
-pub static mut NPAGE: usize = 0;
+pub struct SyncImplRef<T: ?Sized>(pub RefCell<T>);
+
+unsafe impl<T: ?Sized> Sync for SyncImplRef<T> {}
+
+impl<T: ?Sized> SyncImplRef<T> {
+    pub fn borrow(&self) -> Ref<'_, T> {
+        self.0.borrow()
+    }
+
+    pub fn borrow_mut(&self) -> RefMut<'_, T> {
+        self.0.borrow_mut()
+    }
+}
+
+pub static CUR_PGDIR: SyncImplRef<*mut Pde> = SyncImplRef(RefCell::new(ptr::null_mut()));
+pub static PAGES: SyncImplRef<*mut PageNode> = SyncImplRef(RefCell::new(core::ptr::null_mut()));
+pub static PAGE_FREE_LIST: SyncImplRef<PageList> = SyncImplRef(RefCell::new(PageList::new()));
+pub static KERN_HEAP: SyncImplRef<*mut PageNode> = SyncImplRef(RefCell::new(core::ptr::null_mut()));
+pub static NPAGE: SyncImplRef<usize> = SyncImplRef(RefCell::new(0));
 
 const PAGE_SIZE: usize = 4096;
 
@@ -31,11 +46,11 @@ pub struct PageData {
 }
 
 pub fn mips_detect_memory(memsize: usize) {
-    unsafe { NPAGE = memsize / 4096 }
+    *NPAGE.borrow_mut() = memsize / 4096;
     println!(
         "Memory Size: {} KiB; Page Number: {}.",
         memsize / 1024,
-        unsafe { NPAGE }
+        *NPAGE.borrow()
     );
 }
 
@@ -71,50 +86,52 @@ fn alloc(
 }
 
 pub fn mips_vm_init(freemem: &mut usize, memsize: usize) {
-    unsafe {
-        PAGES = alloc(
-            freemem,
-            memsize,
-            NPAGE * size_of::<PageNode>(),
-            PAGE_SIZE,
-            true,
-        );
-        println!("Pages are to the memeory 0x{:x}", freemem);
-        KERNEL_HEAP = alloc(freemem, memsize, 512 * PAGE_SIZE, PAGE_SIZE, true);
-        crate::BUDDY_ALLOCATOR.init(
-            pa2page!(PADDR!(KERNEL_HEAP as usize), PAGES; PageNode) as *mut PageNode,
-            512 * PAGE_SIZE,
-        );
-        println!("Heaps are to the memeory 0x{:x}", freemem);
-    }
+    *PAGES.borrow_mut() = alloc(
+        freemem,
+        memsize,
+        *NPAGE.borrow() * size_of::<PageNode>(),
+        PAGE_SIZE,
+        true,
+    );
+    println!("Pages are to the memeory 0x{:x}", freemem);
+    *KERN_HEAP.borrow_mut() = alloc(freemem, memsize, 512 * PAGE_SIZE, PAGE_SIZE, true);
+    let page_start =
+        pa2page!(PADDR!(*KERN_HEAP.borrow() as usize), *PAGES.borrow(); PageNode) as *mut PageNode;
+    unsafe { crate::BUDDY_ALLOCATOR.init(page_start, 512 * PAGE_SIZE) }
+
+    println!("Heaps are to the memeory 0x{:x}", freemem);
     debugln!("> pmap.rs: mips vm init success");
 }
 
 pub fn page_init(freemem: &mut usize) {
-    let pages = unsafe { PAGES };
+    let pages = *PAGES.borrow_mut();
 
     *freemem = ROUND!(*freemem; PAGE_SIZE);
 
     let mut page_id = 0;
-    while page_id < unsafe { NPAGE } && page_id << PGSHIFT < PADDR!(*freemem) {
+    while page_id < *NPAGE.borrow() && page_id << PGSHIFT < PADDR!(*freemem) {
         unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 1 };
         page_id += 1;
     }
 
     debugln!("> pmap.rs: pages are used for {}", page_id);
 
-    while page_id < unsafe { NPAGE } {
+    while page_id < *NPAGE.borrow() {
         unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 0 };
-        unsafe { PAGE_FREE_LIST.insert_head(ARRAY_PTR!(pages; page_id, PageNode)) };
+        unsafe { (*PAGE_FREE_LIST.borrow_mut()).insert_head(ARRAY_PTR!(pages; page_id, PageNode)) };
         page_id += 1;
     }
 }
 
 pub fn page_alloc() -> Result<*mut PageNode, KError> {
-    match unsafe { PAGE_FREE_LIST.pop_head() } {
+    match unsafe { (*PAGE_FREE_LIST.borrow_mut()).pop_head() } {
         None => Err(KError::NoMem),
         Some(pp) => unsafe {
-            ptr::write_bytes(page2kva!(pp, PAGES; PageNode) as *mut u8, 0, PAGE_SIZE);
+            ptr::write_bytes(
+                page2kva!(pp, *PAGES.borrow(); PageNode) as *mut u8,
+                0,
+                PAGE_SIZE,
+            );
             Ok(pp)
         },
     }
@@ -122,7 +139,7 @@ pub fn page_alloc() -> Result<*mut PageNode, KError> {
 
 pub fn page_free(page: &mut *mut PageNode) {
     assert_eq!(0, unsafe { **page }.data.pp_ref);
-    unsafe { PAGE_FREE_LIST.insert_head(*page) };
+    unsafe { (*PAGE_FREE_LIST.borrow_mut()).insert_head(*page) };
 }
 
 pub fn page_decref(page: &mut *mut PageNode) {
@@ -142,7 +159,9 @@ pub fn pgdir_walk(pgdir: *mut Pde, va: usize, create: bool) -> Result<*mut Pte, 
             unsafe {
                 ptr::write(
                     pgdir_entryp,
-                    (PTE_ADDR!(page2pa!(pp, PAGES; PageNode)) as Pte | PTE_C_CACHEABLE | PTE_V),
+                    (PTE_ADDR!(page2pa!(pp, *PAGES.borrow(); PageNode)) as Pte
+                        | PTE_C_CACHEABLE
+                        | PTE_V),
                 );
                 (*pp).data.pp_ref = 1;
             }
@@ -167,13 +186,13 @@ pub unsafe fn page_insert(
 ) -> Result<(), KError> {
     if let Ok(pte) = pgdir_walk(pgdir, va, false) {
         if !pte.is_null() && unsafe { *pte & PTE_V } != 0 {
-            if pp as usize != pa2page!(unsafe { *pte }, PAGES; PageNode) {
+            if pp as usize != pa2page!(unsafe { *pte }, *PAGES.borrow(); PageNode) {
                 page_remove(pgdir, va, asid);
             } else {
                 tlb_invalidate(asid, va);
                 ptr::write(
                     pte,
-                    page2pa!(pp, PAGES; PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
+                    page2pa!(pp, *PAGES.borrow(); PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
                 );
                 return Ok(());
             }
@@ -184,7 +203,7 @@ pub unsafe fn page_insert(
     let pte = pgdir_walk(pgdir, va, true)?;
     ptr::write(
         pte,
-        page2pa!(pp, PAGES; PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
+        page2pa!(pp, *PAGES.borrow(); PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
     );
     (*pp).data.pp_ref += 1;
 
@@ -196,7 +215,7 @@ pub fn page_lookup(pgdir: *mut Pde, va: usize) -> Option<(*mut PageNode, *mut Pt
         if pte.is_null() || unsafe { *pte & PTE_V == 0 } {
             None
         } else {
-            let pp = unsafe { pa2page!( *pte , PAGES; PageNode) as *mut PageNode };
+            let pp = unsafe { pa2page!( *pte , *PAGES.borrow(); PageNode) as *mut PageNode };
             Some((pp, pte))
         }
     } else {

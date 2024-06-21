@@ -90,7 +90,7 @@ unsafe fn map_segment(pgdir: *mut Pde, asid: u32, pa: usize, va: usize, size: us
     debugln!("> env.rs: map_segment() with size=0x{:x}", size);
     for i in (0..size).step_by(PAGE_SIZE) {
         unsafe {
-            let pp = pa2page!(pa + i, PAGES; PageNode) as *mut PageNode;
+            let pp = pa2page!(pa + i, *PAGES.borrow(); PageNode) as *mut PageNode;
             page_insert(pgdir, va + i, asid, perm, pp).unwrap();
         }
     }
@@ -129,13 +129,13 @@ pub fn env_init() {
     unsafe {
         let p = page_alloc().unwrap();
         (*p).data.pp_ref += 1;
-        let base_pgdir = page2kva!(p, PAGES; PageNode) as *mut Pde;
+        let base_pgdir = page2kva!(p, *PAGES.borrow(); PageNode) as *mut Pde;
         map_segment(
             base_pgdir,
             0,
-            PADDR!(PAGES as usize),
+            PADDR!(*PAGES.borrow() as usize),
             UPAGES,
-            ROUND!(NPAGE * size_of::<PageNode>(); PAGE_SIZE),
+            ROUND!(*NPAGE.borrow() * size_of::<PageNode>(); PAGE_SIZE),
             PTE_G,
         );
         map_segment(
@@ -163,7 +163,7 @@ pub unsafe fn env_setup_vm(env: *mut EnvNode) -> Result<(), KError> {
     let p = page_alloc()?;
 
     (*p).data.pp_ref += 1;
-    (*(*env).data).pgdir = page2kva!(p, PAGES; PageNode) as *mut Pde;
+    (*(*env).data).pgdir = page2kva!(p, *PAGES.borrow(); PageNode) as *mut Pde;
 
     // memcpy
     copy_nonoverlapping(
@@ -240,12 +240,13 @@ pub unsafe fn env_free(env: *mut EnvNode) {
             }
         }
         ptr::write((*(*env).data).pgdir.add(pdeno), 0);
-        page_decref(&mut (pa2page!(pa, PAGES; PageNode) as *mut PageNode));
+        page_decref(&mut (pa2page!(pa, *PAGES.borrow(); PageNode) as *mut PageNode));
         tlb_invalidate((*(*env).data).asid, UVPT + (pdeno << PGSHIFT));
     }
 
     page_decref(
-        &mut (pa2page!(PADDR!((*(*env).data).pgdir as usize), PAGES; PageNode) as *mut PageNode),
+        &mut (pa2page!(PADDR!((*(*env).data).pgdir as usize), *PAGES.borrow(); PageNode)
+            as *mut PageNode),
     );
     asid_free((*(*env).data).asid);
     tlb_invalidate((*(*env).data).asid, UVPT + (PDX!(UVPT) << PGSHIFT));
@@ -312,7 +313,7 @@ pub unsafe fn load_icode(e: *mut EnvNode, binary: *const u8, size: usize) {
         if !src.is_null() {
             copy_nonoverlapping(
                 src,
-                (page2kva!(p, PAGES; PageNode) as *mut u8).offset(offset),
+                (page2kva!(p, *PAGES.borrow(); PageNode) as *mut u8).offset(offset),
                 len,
             )
         }
@@ -379,7 +380,7 @@ pub unsafe fn env_run(env: *mut EnvNode) -> ! {
     CUR_ENV = env;
     (*(*CUR_ENV).data).env_runs += 1;
 
-    CUR_PGDIR = (*(*CUR_ENV).data).pgdir;
+    *CUR_PGDIR.borrow_mut() = (*(*CUR_ENV).data).pgdir;
 
     env_pop_tf(
         addr_of!((*(*CUR_ENV).data).trap_frame),

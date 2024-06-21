@@ -58,16 +58,17 @@ fn passive_alloc(va: usize, pgdir: *mut Pde, asid: u32) {
 pub fn _do_tlb_refill(pentrylo: &mut [u32; 2], va: usize, asid: u32) {
     tlb_invalidate(asid, va);
 
-    unsafe {
-        loop {
-            match page_lookup(CUR_PGDIR, va) {
-                None => passive_alloc(va, CUR_PGDIR, asid),
-                Some((_, ppte)) => {
-                    let ppte = (ppte as u32 & !0x7) as *mut Pte;
+    loop {
+        let cur_pgdir = *CUR_PGDIR.borrow();
+        match page_lookup(cur_pgdir, va) {
+            None => passive_alloc(va, cur_pgdir, asid),
+            Some((_, ppte)) => {
+                let ppte = (ppte as u32 & !0x7) as *mut Pte;
+                unsafe {
                     pentrylo[0] = *ppte >> 6;
                     pentrylo[1] = *((ppte as usize + 4) as *mut Pte) >> 6;
-                    break;
                 }
+                break;
             }
         }
     }
@@ -84,7 +85,7 @@ pub unsafe fn do_tlb_mod(trapframe: *mut TrapFrame) {
     (*trapframe).regs[29] -= size_of::<TrapFrame>() as u32;
     ((*trapframe).regs[29] as *mut TrapFrame).write(stored_trapframe);
     // Pte was ignored in the C-Edition Mos
-    let _ = page_lookup(CUR_PGDIR, (*trapframe).cp0_badvaddr as usize);
+    let _ = page_lookup(*CUR_PGDIR.borrow(), (*trapframe).cp0_badvaddr as usize);
     if (*(*CUR_ENV).data).user_tlb_mod_entry != 0 {
         (*trapframe).regs[4] = (*trapframe).regs[29];
         (*trapframe).regs[29] -= size_of_val(&(*trapframe).regs[4]) as u32;
