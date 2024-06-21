@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["buddy_allocator"]};
+window.SIDEBAR_ITEMS = {"mod":["buddy_allocator","marcos","pmap","tlbex"]};

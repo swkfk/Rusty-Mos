@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["elf","env","io","machine","pmap","sched","syscall_all","tlbex","trap"]};
+window.SIDEBAR_ITEMS = {"mod":["elf","env","io","machine","sched","syscall_all","trap"]};
