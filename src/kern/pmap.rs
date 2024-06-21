@@ -15,6 +15,7 @@ use super::tlbex::tlb_invalidate;
 pub static mut CUR_PGDIR: *mut Pde = ptr::null_mut();
 pub static mut PAGES: *mut PageNode = core::ptr::null_mut();
 pub static mut PAGE_FREE_LIST: PageList = PageList::new();
+pub static mut KERNEL_HEAP: *mut PageNode = core::ptr::null_mut();
 pub static mut NPAGE: usize = 0;
 
 const PAGE_SIZE: usize = 4096;
@@ -48,9 +49,9 @@ fn alloc(
     extern "C" {
         fn end();
     }
-    println!("Externed end = 0x{:x} bytes", end as usize);
 
     if *freemem == 0 {
+        println!("Externed end = 0x{:x} bytes", end as usize);
         *freemem = end as usize;
     }
 
@@ -78,8 +79,14 @@ pub fn mips_vm_init(freemem: &mut usize, memsize: usize) {
             PAGE_SIZE,
             true,
         );
+        println!("Pages are to the memeory 0x{:x}", freemem);
+        KERNEL_HEAP = alloc(freemem, memsize, 512 * PAGE_SIZE, PAGE_SIZE, true);
+        crate::BUDDY_ALLOCATOR.init(
+            pa2page!(PADDR!(KERNEL_HEAP as usize), PAGES; PageNode) as *mut PageNode,
+            512 * PAGE_SIZE,
+        );
+        println!("Heaps are to the memeory 0x{:x}", freemem);
     }
-    println!("Pages are to the memeory 0x{:x}", freemem);
     debugln!("> pmap.rs: mips vm init success");
 }
 
@@ -93,6 +100,8 @@ pub fn page_init(freemem: &mut usize) {
         unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 1 };
         page_id += 1;
     }
+
+    debugln!("> pmap.rs: pages are used for {}", page_id);
 
     while page_id < unsafe { NPAGE } {
         unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 0 };

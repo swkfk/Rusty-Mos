@@ -43,4 +43,10 @@ SECTIONS {
 	bss_end = .;
 	. = 0x80400000;
 	end = . ;
+
+	/DISCARD/ : {
+		*(.comment)
+		*(.eh_frame)
+		*(.eh_frame_hdr)
+	}
 }
