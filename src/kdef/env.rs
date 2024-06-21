@@ -3,8 +3,8 @@
 
 use core::ptr::null_mut;
 
-use crate::kern::{pmap::Pde, trap::TrapFrame};
-
+use crate::kern::trap::TrapFrame;
+use crate::memory::pmap::Pde;
 use crate::utils::linked_list::{LinkList, LinkNode, TailLinkList};
 
 /// The env status enum. Compatible with the C-Like memory structure.

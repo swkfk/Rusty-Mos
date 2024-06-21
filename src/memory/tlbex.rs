@@ -7,9 +7,9 @@ use crate::{
     GEN_MASK, PTE_ADDR,
 };
 
-use crate::kern::pmap::{page_alloc, page_insert, page_lookup, Pde, Pte, CUR_PGDIR};
+use crate::memory::pmap::{page_alloc, page_insert, page_lookup, Pde, Pte, CUR_PGDIR};
 
-use super::{env::CUR_ENV, trap::TrapFrame};
+use crate::kern::{env::CUR_ENV, trap::TrapFrame};
 
 extern "C" {
     pub fn tlb_out(entryhi: u32);

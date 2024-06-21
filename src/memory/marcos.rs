@@ -1,4 +1,4 @@
-//! Definitions of the conversion macros for the page.
+//! Definitions of the conversion macros for the pages and memory.
 
 /// Get the page number through the page object.
 #[macro_export]
@@ -60,4 +60,71 @@ macro_rules! va2pa {
             }
         }
     }};
+}
+
+/// Get the physical address of the virtual address in **kernel segment**
+///
+/// Someway the opposite of [KADDR](crate::KADDR)
+///
+/// # Panic
+/// Assertion will fail if the virtual address is not in the **kernel
+/// segment**.
+#[macro_export]
+macro_rules! PADDR {
+    ($x: expr) => {{
+        assert!($x >= 0x80000000);
+        $x - 0x80000000
+    }};
+}
+
+/// Get the virtual address (in **kernel segment**) from the physical address
+///
+/// Someway the opposite of [PADDR](crate::PADDR)
+///
+/// # Panic
+/// **NOT IMPLEMENTED**
+/// Assertion will fail if the virtual address is not in the **kernel
+/// segment**.
+#[macro_export]
+macro_rules! KADDR {
+    ($x: expr) => {{
+        // assert!(($x >> 12) < npage);
+        $x + 0x80000000
+    }};
+}
+
+/// Get the address(or the frame number etc.) from the page table entry (PTE)
+#[macro_export]
+macro_rules! PTE_ADDR {
+    ($pte: expr) => {{
+        $pte & !0xFFF
+    }};
+}
+
+/// Get the **Page Directory Offset** from the virtual address
+///
+/// See also: [PTX](crate::PTX)
+#[macro_export]
+macro_rules! PDX {
+    ($va: expr) => {{
+        ($va >> $crate::kdef::mmu::PDSHIFT) & 0x03FF
+    }};
+}
+
+/// Get the **Page Table Offset** from the virtual address
+///
+/// See also: [PDX](crate::PDX)
+#[macro_export]
+macro_rules! PTX {
+    ($va: expr) => {{
+        ($va >> $crate::kdef::mmu::PGSHIFT) & 0x03FF
+    }};
+}
+
+/// Get the Page Number from the physical address
+#[macro_export]
+macro_rules! PPN {
+    ($pa: expr) => {
+        $pa >> $crate::kdef::mmu::PGSHIFT
+    };
 }

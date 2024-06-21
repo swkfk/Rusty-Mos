@@ -12,13 +12,13 @@ use crate::{
         syscall::MAX_SYS_NO,
     },
     kern::env::env_destory,
+    memory::pmap::{page_alloc, page_insert, page_lookup, page_remove},
 };
 
 use super::{
     env::{env_alloc, envid2env, CUR_ENV, ENV_SCHE_LIST},
     io::{ioread_into_va, iowrite_from_va},
     machine::{print_charc, scan_charc},
-    pmap::{page_alloc, page_insert, page_lookup, page_remove},
     sched::schedule,
     trap::TrapFrame,
 };

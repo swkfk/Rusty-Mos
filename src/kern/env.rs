@@ -17,18 +17,15 @@ use crate::{
             UTOP, UVPT,
         },
     },
-    kern::{
-        pmap::{page_decref, page_insert, page_remove, PageNode, Pte, CUR_PGDIR, NPAGE, PAGES},
-        sched::schedule,
+    kern::{elf::elf_load_seg, sched::schedule, trap::TrapFrame},
+    memory::{
+        pmap::{
+            page_alloc, page_decref, page_insert, page_remove, PageNode, Pde, Pte, CUR_PGDIR,
+            NPAGE, PAGES,
+        },
         tlbex::tlb_invalidate,
     },
     pa2page, page2kva, println, ENVX, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
-};
-
-use super::{
-    elf::elf_load_seg,
-    pmap::{page_alloc, Pde},
-    trap::TrapFrame,
 };
 
 /// Wrapper to make it aligned to a page.

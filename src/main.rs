@@ -6,11 +6,8 @@ use core::{arch::global_asm, include_str, panic::PanicInfo};
 
 use rusty_mos::{
     debugln,
-    kern::{
-        env::env_init,
-        machine::halt,
-        pmap::{mips_detect_memory, mips_vm_init, page_init},
-    },
+    kern::{env::env_init, machine::halt},
+    memory::pmap::{mips_detect_memory, mips_vm_init, page_init},
     println, CALL_TEST,
 };
 

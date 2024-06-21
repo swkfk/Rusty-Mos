@@ -4,6 +4,5 @@ pub mod elf;
 pub mod env;
 pub mod error;
 pub mod mmu;
-pub mod pmap;
 pub mod syscall;
 pub mod types;

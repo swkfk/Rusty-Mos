@@ -9,7 +9,7 @@ use spin::Mutex;
 use crate::{
     debugln,
     kdef::mmu::PAGE_SIZE,
-    kern::pmap::{PageList, PageNode, PAGES},
+    memory::pmap::{PageList, PageNode, PAGES},
     pa2page, page2kva, PADDR,
 };
 
