@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["bitops","cp0reg","elf","env","error","mmu","pmap","queue","syscall","types"]};
+window.SIDEBAR_ITEMS = {"mod":["bitops","cp0reg","elf","env","error","mmu","pmap","syscall","types"]};

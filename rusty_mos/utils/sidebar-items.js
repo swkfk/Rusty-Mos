@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["bitmap","linked_list"]};
