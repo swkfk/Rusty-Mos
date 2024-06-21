@@ -2,13 +2,17 @@
 #![no_std]
 #![no_main]
 
-use core::{arch::global_asm, include_str, panic::PanicInfo};
+use core::{arch::global_asm, include_str, panic::PanicInfo, ptr::addr_of};
 
 use rusty_mos::{
     debugln,
-    kern::{env::env_init, machine::halt},
+    kern::{
+        env::{env_create, env_init},
+        machine::halt,
+        sched::schedule,
+    },
     memory::pmap::{mips_detect_memory, mips_vm_init, page_init},
-    println, CALL_TEST,
+    println,
 };
 
 global_asm!(include_str!("kasm/include/inc.S"));
@@ -24,6 +28,13 @@ fn panic(info: &PanicInfo) -> ! {
     println!("\x1b[31mKernel Panic!");
     println!("{}\x1b[0m", info);
     halt();
+}
+
+macro_rules! ENV_CREATE {
+    ($icode:expr, $prio:expr) => {
+        let b = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/target/user/", $icode));
+        unsafe { env_create(addr_of!(*b) as *const u8, b.len(), 1) };
+    };
 }
 
 #[no_mangle]
@@ -48,22 +59,10 @@ pub extern "C" fn rust_mips_init(
 
     page_init(&mut freemem);
 
-    CALL_TEST!(test_linklist; ());
-    CALL_TEST!(test_page; ());
-    CALL_TEST!(test_page_strong; ());
-    CALL_TEST!(test_tlb_refill; ());
-
     env_init();
 
-    CALL_TEST!(test_tailq; ());
-    CALL_TEST!(test_envs; ());
-    CALL_TEST!(test_envid2env; ());
-    CALL_TEST!(test_icode_loader; ());
+    ENV_CREATE!("icode.b", 1);
+    ENV_CREATE!("serv.b", 1);
 
-    CALL_TEST!(test_loop; ());
-    CALL_TEST!(test_qsort; ());
-
-    CALL_TEST!(test_run_env; ());
-
-    halt();
+    unsafe { schedule(false) };
 }

@@ -35,12 +35,6 @@ build:
 	MOS_USER=1 $(MAKE) --directory=mos_user
 	MOS_TEST=run_env MOS_RUN_ENV=mos $(CARGO_BUILD)
 
-test:
-	MOS_TEST=$(item) $(CARGO_BUILD)
-
-env:
-	MOS_TEST=run_env MOS_RUN_ENV=$(item) $(CARGO_BUILD)
-
 run: build
 	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)
 
