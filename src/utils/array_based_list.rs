@@ -17,7 +17,7 @@ impl<const LEN: usize> Default for ArrayLinkedList<LEN> {
 impl<const LEN: usize> ArrayLinkedList<LEN> {
     pub const fn new() -> Self {
         Self {
-            array: [ArrayLinkNode::new(0); LEN],
+            array: [ArrayLinkNode::new(); LEN],
             head: None,
             tail: None,
         }
@@ -86,15 +86,13 @@ impl<const LEN: usize> ArrayLinkedList<LEN> {
 pub struct ArrayLinkNode {
     pub next: Option<usize>,
     pub prev: Option<usize>,
-    pub data: usize,
 }
 
 impl ArrayLinkNode {
-    pub const fn new(data: usize) -> ArrayLinkNode {
+    pub const fn new() -> ArrayLinkNode {
         ArrayLinkNode {
             prev: None,
             next: None,
-            data,
         }
     }
 }
