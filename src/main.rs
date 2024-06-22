@@ -2,15 +2,11 @@
 #![no_std]
 #![no_main]
 
-use core::{arch::global_asm, include_str, panic::PanicInfo, ptr::addr_of};
+use core::{arch::global_asm, include_str, panic::PanicInfo};
 
 use rusty_mos::{
     debugln,
-    kern::{
-        env::{env_create, env_init},
-        machine::halt,
-        sched::schedule,
-    },
+    kern::{env::env_init, machine::halt, sched::schedule},
     memory::pmap::{mips_detect_memory, mips_vm_init, page_init},
     println,
 };
@@ -30,6 +26,12 @@ fn panic(info: &PanicInfo) -> ! {
     halt();
 }
 
+#[cfg(mos_build)]
+use core::ptr::addr_of;
+#[cfg(mos_build)]
+use rusty_mos::kern::env::env_create;
+
+#[cfg(mos_build)]
 macro_rules! ENV_CREATE {
     ($icode:expr, $prio:expr) => {
         let b = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/target/user/", $icode));
@@ -61,7 +63,9 @@ pub extern "C" fn rust_mips_init(
 
     env_init();
 
+    #[cfg(mos_build)]
     ENV_CREATE!("icode.b", 1);
+    #[cfg(mos_build)]
     ENV_CREATE!("serv.b", 1);
 
     schedule(false);

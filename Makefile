@@ -33,7 +33,7 @@ CARGO_BUILD = $(CARGO) build $(CARGO_TARGET) $(CARGO_FLAG)
 
 build:
 	MOS_USER=1 $(MAKE) --directory=mos_user
-	MOS_TEST=run_env MOS_RUN_ENV=mos $(CARGO_BUILD)
+	MOS_BUILD=1 $(CARGO_BUILD)
 
 run: build
 	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)
