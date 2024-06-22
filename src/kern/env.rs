@@ -266,7 +266,9 @@ pub fn env_free(env_index: usize) {
     );
     ENVS_DATA.borrow_mut().0[env_index].status = EnvStatus::Free;
 
-    ENV_SCHE_LIST.borrow_mut().remove(env_index);
+    if ENV_SCHE_LIST.borrow_mut().contains(env_index) {
+        ENV_SCHE_LIST.borrow_mut().remove(env_index);
+    }
     ENV_FREE_LIST.borrow_mut().insert_head(env_index);
 }
 

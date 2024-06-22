@@ -52,11 +52,7 @@ impl<const LEN: usize> ArrayLinkedList<LEN> {
         match self.head {
             None => None,
             Some(i) => {
-                self.head = self.array[i].next;
-                if self.head.is_none() {
-                    self.tail = None;
-                }
-                self.array[i].next = None;
+                self.remove(i);
                 Some(i)
             }
         }
@@ -84,6 +80,16 @@ impl<const LEN: usize> ArrayLinkedList<LEN> {
         }
         self.array[item].next = None;
         self.array[item].prev = None;
+    }
+
+    pub fn contains(&self, item: usize) -> bool {
+        if self.array[item].prev.is_none()
+            && self.array[item].next.is_none()
+            && (self.head != Some(item) || self.tail != Some(item))
+        {
+            return false;
+        }
+        true
     }
 }
 
