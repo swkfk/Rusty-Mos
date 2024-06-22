@@ -391,6 +391,7 @@ pub fn do_syscall(trapframe: *mut TrapFrame) {
     let sysno = tf.regs[4];
     if !(0..MAX_SYS_NO as u32).contains(&sysno) {
         unsafe { (*tf_p).regs[2] = KError::NoSys as u32 }
+        return;
     }
     unsafe { (*tf_p).cp0_epc += size_of::<u32>() as u32 }
 
