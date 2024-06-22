@@ -15,9 +15,9 @@ impl<const LEN: usize> Default for ArrayLinkedList<LEN> {
 }
 
 impl<const LEN: usize> ArrayLinkedList<LEN> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
-            array: [ArrayLinkNode::default(); LEN],
+            array: [ArrayLinkNode::new(0); LEN],
             head: None,
             tail: None,
         }

@@ -1,7 +1,7 @@
-use core::cell::{Ref, RefCell, RefMut};
 use core::{mem::size_of, ptr};
 
 use crate::utils::linked_list::{LinkList, LinkNode};
+use crate::utils::sync_ref_cell::SyncImplRef;
 use crate::{
     debugln,
     kdef::{
@@ -13,25 +13,11 @@ use crate::{
 
 use super::tlbex::tlb_invalidate;
 
-pub struct SyncImplRef<T: ?Sized>(pub RefCell<T>);
-
-unsafe impl<T: ?Sized> Sync for SyncImplRef<T> {}
-
-impl<T: ?Sized> SyncImplRef<T> {
-    pub fn borrow(&self) -> Ref<'_, T> {
-        self.0.borrow()
-    }
-
-    pub fn borrow_mut(&self) -> RefMut<'_, T> {
-        self.0.borrow_mut()
-    }
-}
-
-pub static CUR_PGDIR: SyncImplRef<*mut Pde> = SyncImplRef(RefCell::new(ptr::null_mut()));
-pub static PAGES: SyncImplRef<*mut PageNode> = SyncImplRef(RefCell::new(core::ptr::null_mut()));
-pub static PAGE_FREE_LIST: SyncImplRef<PageList> = SyncImplRef(RefCell::new(PageList::new()));
-pub static KERN_HEAP: SyncImplRef<*mut PageNode> = SyncImplRef(RefCell::new(core::ptr::null_mut()));
-pub static NPAGE: SyncImplRef<usize> = SyncImplRef(RefCell::new(0));
+pub static CUR_PGDIR: SyncImplRef<*mut Pde> = SyncImplRef::new(ptr::null_mut());
+pub static PAGES: SyncImplRef<*mut PageNode> = SyncImplRef::new(core::ptr::null_mut());
+pub static PAGE_FREE_LIST: SyncImplRef<PageList> = SyncImplRef::new(PageList::new());
+pub static KERN_HEAP: SyncImplRef<*mut PageNode> = SyncImplRef::new(core::ptr::null_mut());
+pub static NPAGE: SyncImplRef<usize> = SyncImplRef::new(0);
 
 const PAGE_SIZE: usize = 4096;
 
