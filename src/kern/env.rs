@@ -2,7 +2,8 @@
 
 use core::{
     mem::size_of,
-    ptr::{self, addr_of, addr_of_mut, copy_nonoverlapping, null_mut},
+    ptr::{self, addr_of, copy_nonoverlapping, null_mut},
+    sync::atomic::{AtomicU32, AtomicUsize, Ordering::SeqCst},
 };
 
 use crate::{
@@ -10,7 +11,7 @@ use crate::{
     kdef::{
         cp0reg::*,
         elf::{Elf32Ehdr, Elf32Phdr, PT_LOAD},
-        env::{EnvData, EnvList, EnvNode, EnvStatus, EnvTailList, LOG2NENV, NENV},
+        env::{EnvData, EnvStatus, LOG2NENV, NENV},
         error::KError,
         mmu::{
             KSTACKTOP, NASID, PAGE_SIZE, PDSHIFT, PGSHIFT, PTE_G, PTE_V, UENVS, UPAGES, USTACKTOP,
@@ -25,7 +26,12 @@ use crate::{
         },
         tlbex::tlb_invalidate,
     },
-    pa2page, page2kva, println, ENVX, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
+    pa2page, page2kva, println,
+    utils::{
+        array_based_list::{Aligned, ArrayLinkedList},
+        sync_ref_cell::SyncImplRef as SyncRef,
+    },
+    ENVX, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
 
 /// Wrapper to make it aligned to a page.
@@ -36,18 +42,19 @@ pub struct EnvsWrapper<T>([T; NENV]);
 pub static mut BASE_PGDIR: *mut Pde = null_mut();
 
 /// The current env.
-pub static mut CUR_ENV: *mut EnvNode = null_mut();
+pub static CUR_ENV_IDX: AtomicUsize = AtomicUsize::new(NENV);
 
 /// Free env list.
-pub static mut ENV_FREE_LIST: EnvList = EnvList::new();
+pub static ENV_FREE_LIST: SyncRef<ArrayLinkedList<NENV>> = SyncRef::new(ArrayLinkedList::new());
 /// Runnable env list.
-pub static mut ENV_SCHE_LIST: EnvTailList = EnvTailList::new();
+pub static ENV_SCHE_LIST: SyncRef<ArrayLinkedList<NENV>> = SyncRef::new(ArrayLinkedList::new());
 /// The envs array in *kernel*, mapped to the [UENVS] and used by the user
 /// program.
-pub static mut ENVS_DATA: EnvsWrapper<EnvData> = EnvsWrapper([EnvData::new(); NENV]);
+pub static ENVS_DATA: SyncRef<Aligned<EnvData, NENV>> =
+    SyncRef::new(Aligned([EnvData::new(); NENV]));
 /// The envs array used in the *kernel* space. The element in it has the link
 /// field to make it a link node.
-pub static mut ENVS: EnvsWrapper<EnvNode> = EnvsWrapper([EnvNode::const_construct(); NENV]);
+// pub static mut ENVS: EnvsWrapper<EnvNode> = EnvsWrapper([EnvNode::const_construct(); NENV]);
 
 /// Bitmap for the asid allocatoin.
 pub static mut ASID_BITMAP: [u32; (NASID / 32) as usize] = [0; (NASID / 32) as usize];
@@ -97,37 +104,33 @@ unsafe fn map_segment(pgdir: *mut Pde, asid: u32, pa: usize, va: usize, size: us
 }
 
 /// The static variable used by [mkenvid];
-static mut ENV_I: u32 = 0;
+static ENV_I: AtomicU32 = AtomicU32::new(1);
 
 /// Get the envid with the env node.
-fn mkenvid(e: *mut EnvNode) -> u32 {
-    unsafe {
-        ENV_I += 1;
-        (ENV_I << (1 + LOG2NENV)) | (e.offset_from(addr_of_mut!(ENVS.0[0]))) as u32
-    }
+fn mkenvid(index: usize) -> u32 {
+    let env_i = ENV_I.fetch_add(1, SeqCst);
+    (env_i << (1 + LOG2NENV)) | index as u32
 }
 
 /// Init the env environment. Put the envs into the free list, and map the PAGES
 /// and ENVS to base_pgdir's UPAGES and UENVS accordingly.
 pub fn env_init() {
-    unsafe {
-        debugln!("> env_init: enable the tailq ENV_SCHE_LIST");
-        ENV_SCHE_LIST.enable();
-    }
+    // unsafe {
+    //     debugln!("> env_init: enable the tailq ENV_SCHE_LIST");
+    //     ENV_SCHE_LIST.enable();
+    // }
 
-    println!("Envs are to the memory 0x{:x}", unsafe {
-        addr_of_mut!(ENVS) as usize
-    });
+    println!(
+        "Envs are to the memory 0x{:x}",
+        addr_of!(ENVS_DATA.borrow().0[0]) as usize
+    );
     for i in (0..NENV).rev() {
-        unsafe {
-            ENVS.0[i].data = addr_of_mut!(ENVS_DATA.0[i]);
-            (*ENVS.0[i].data).status = EnvStatus::Free; // Useless this line
-            ENV_FREE_LIST.insert_head(addr_of_mut!(ENVS.0[i]));
-        }
+        ENVS_DATA.borrow_mut().0[i].status = EnvStatus::Free; // Useless this line
+        ENV_FREE_LIST.borrow_mut().insert_head(i);
     }
 
+    let p = page_alloc().unwrap();
     unsafe {
-        let p = page_alloc().unwrap();
         (*p).data.pp_ref += 1;
         let base_pgdir = page2kva!(p, *PAGES.borrow(); PageNode) as *mut Pde;
         map_segment(
@@ -141,7 +144,7 @@ pub fn env_init() {
         map_segment(
             base_pgdir,
             0,
-            PADDR!(addr_of_mut!(ENVS_DATA) as usize),
+            PADDR!(addr_of!(ENVS_DATA.borrow().0[0]) as usize),
             UENVS,
             ROUND!(NENV * size_of::<EnvData>(); PAGE_SIZE),
             PTE_G,
@@ -159,23 +162,27 @@ pub fn env_init() {
 ///
 /// # Safety
 /// The `env` **SHALL** be valid.
-pub unsafe fn env_setup_vm(env: *mut EnvNode) -> Result<(), KError> {
+pub fn env_setup_vm(env_index: usize) -> Result<(), KError> {
     let p = page_alloc()?;
 
-    (*p).data.pp_ref += 1;
-    (*(*env).data).pgdir = page2kva!(p, *PAGES.borrow(); PageNode) as *mut Pde;
+    unsafe { (*p).data.pp_ref += 1 }
+    ENVS_DATA.borrow_mut().0[env_index].pgdir = page2kva!(p, *PAGES.borrow(); PageNode) as *mut Pde;
+
+    let env_pdgir = ENVS_DATA.borrow_mut().0[env_index].pgdir;
 
     // memcpy
-    copy_nonoverlapping(
-        BASE_PGDIR.wrapping_add(PDX!(UTOP)),
-        (*(*env).data).pgdir.wrapping_add(PDX!(UTOP)),
-        PDX!(UVPT) - PDX!(UTOP),
-    );
+    unsafe {
+        copy_nonoverlapping(
+            BASE_PGDIR.wrapping_add(PDX!(UTOP)),
+            env_pdgir.wrapping_add(PDX!(UTOP)),
+            PDX!(UVPT) - PDX!(UTOP),
+        );
 
-    ptr::write(
-        (*(*env).data).pgdir.wrapping_add(PDX!(UVPT)),
-        PADDR!((*(*env).data).pgdir as u32) | PTE_V,
-    );
+        ptr::write(
+            env_pdgir.wrapping_add(PDX!(UVPT)),
+            PADDR!(env_pdgir as u32) | PTE_V,
+        );
+    }
 
     Ok(())
 }
@@ -192,17 +199,22 @@ pub unsafe fn env_setup_vm(env: *mut EnvNode) -> Result<(), KError> {
 ///
 /// # Safety
 /// The env got in the free list **SHALL** be valid.
-pub unsafe fn env_alloc(parent_id: u32) -> Result<*mut EnvNode, KError> {
-    let e = ENV_FREE_LIST.pop_head().ok_or(KError::NoFreeEnv)?;
+pub fn env_alloc(parent_id: u32) -> Result<usize, KError> {
+    let e = ENV_FREE_LIST
+        .borrow_mut()
+        .pop_head()
+        .ok_or(KError::NoFreeEnv)?;
     env_setup_vm(e)?;
 
-    (*(*e).data).user_tlb_mod_entry = 0;
-    (*(*e).data).env_runs = 0;
-    (*(*e).data).id = mkenvid(e);
-    (*(*e).data).asid = asid_alloc()?;
-    (*(*e).data).parent_id = parent_id;
-    (*(*e).data).trap_frame.cp0_status = STATUS_IM7 | STATUS_IE | STATUS_EXL | STATUS_UM;
-    (*(*e).data).trap_frame.regs[29] = (USTACKTOP - size_of::<u32>() - size_of::<*mut u8>()) as u32;
+    ENVS_DATA.borrow_mut().0[e].user_tlb_mod_entry = 0;
+    ENVS_DATA.borrow_mut().0[e].env_runs = 0;
+    ENVS_DATA.borrow_mut().0[e].id = mkenvid(e);
+    ENVS_DATA.borrow_mut().0[e].asid = asid_alloc()?;
+    ENVS_DATA.borrow_mut().0[e].parent_id = parent_id;
+    ENVS_DATA.borrow_mut().0[e].trap_frame.cp0_status =
+        STATUS_IM7 | STATUS_IE | STATUS_EXL | STATUS_UM;
+    ENVS_DATA.borrow_mut().0[e].trap_frame.regs[29] =
+        (USTACKTOP - size_of::<u32>() - size_of::<*mut u8>()) as u32;
 
     Ok(e)
 }
@@ -212,60 +224,68 @@ pub unsafe fn env_alloc(parent_id: u32) -> Result<*mut EnvNode, KError> {
 ///
 /// # Safety
 /// The `env` and all its pages **SHALL** be valid.
-pub unsafe fn env_free(env: *mut EnvNode) {
+pub fn env_free(env_index: usize) {
+    let cur_index = CUR_ENV_IDX.load(SeqCst);
     debugln!(
         "% {}: Free env {}",
-        if CUR_ENV.is_null() {
+        if cur_index == NENV {
             0
         } else {
-            (*(*CUR_ENV).data).id
+            ENVS_DATA.borrow().0[cur_index].id
         },
-        (*(*env).data).id
+        ENVS_DATA.borrow().0[env_index].id
     );
 
     for pdeno in 0..PDX!(UTOP) {
-        if *((*(*env).data).pgdir.add(pdeno)) & PTE_V == 0 {
+        if unsafe { *(ENVS_DATA.borrow().0[env_index].pgdir.add(pdeno)) } & PTE_V == 0 {
             continue;
         }
 
-        let pa = PTE_ADDR!(*((*(*env).data).pgdir.add(pdeno)));
+        let pa = unsafe { PTE_ADDR!(*(ENVS_DATA.borrow().0[env_index].pgdir.add(pdeno))) };
         let pt = KADDR!(pa) as *mut Pte;
         for pteno in 0..PTX!(!0) {
-            if *(pt.add(pteno)) & PTE_V != 0 {
+            if unsafe { *(pt.add(pteno)) } & PTE_V != 0 {
                 page_remove(
-                    (*(*env).data).pgdir,
+                    ENVS_DATA.borrow().0[env_index].pgdir,
                     (pdeno << PDSHIFT) | (pteno << PGSHIFT),
-                    (*(*env).data).asid,
+                    ENVS_DATA.borrow().0[env_index].asid,
                 );
             }
         }
-        ptr::write((*(*env).data).pgdir.add(pdeno), 0);
+        unsafe { ptr::write(ENVS_DATA.borrow().0[env_index].pgdir.add(pdeno), 0) };
         page_decref(&mut (pa2page!(pa, *PAGES.borrow(); PageNode) as *mut PageNode));
-        tlb_invalidate((*(*env).data).asid, UVPT + (pdeno << PGSHIFT));
+        tlb_invalidate(
+            ENVS_DATA.borrow().0[env_index].asid,
+            UVPT + (pdeno << PGSHIFT),
+        );
     }
 
     page_decref(
-        &mut (pa2page!(PADDR!((*(*env).data).pgdir as usize), *PAGES.borrow(); PageNode)
+        &mut (pa2page!(PADDR!(ENVS_DATA.borrow().0[env_index].pgdir as usize), *PAGES.borrow(); PageNode)
             as *mut PageNode),
     );
-    asid_free((*(*env).data).asid);
-    tlb_invalidate((*(*env).data).asid, UVPT + (PDX!(UVPT) << PGSHIFT));
-    (*(*env).data).status = EnvStatus::Free;
+    asid_free(ENVS_DATA.borrow().0[env_index].asid);
+    tlb_invalidate(
+        ENVS_DATA.borrow().0[env_index].asid,
+        UVPT + (PDX!(UVPT) << PGSHIFT),
+    );
+    ENVS_DATA.borrow_mut().0[env_index].status = EnvStatus::Free;
 
-    ENV_SCHE_LIST.remove(env);
-    ENV_FREE_LIST.insert_head(env);
+    ENV_SCHE_LIST.borrow_mut().remove(env_index);
+    ENV_FREE_LIST.borrow_mut().insert_head(env_index);
 }
 
 /// Destory an env and free it. Re-schedule will be performed.
 ///
 /// # Safety
 /// The `env` and all its pages **SHALL** be valid.
-pub unsafe fn env_destory(env: *mut EnvNode) {
-    env_free(env);
+pub fn env_destory(env_index: usize) {
+    env_free(env_index);
 
-    if CUR_ENV == env {
-        CUR_ENV = null_mut();
+    if CUR_ENV_IDX.load(SeqCst) == env_index {
+        CUR_ENV_IDX.store(NENV, SeqCst);
         debugln!("% Killed.");
+
         schedule(true);
     }
 }
@@ -276,20 +296,24 @@ pub unsafe fn env_destory(env: *mut EnvNode) {
 ///
 /// # Safety
 /// The `e` get by index **SHELL** be valid.
-pub unsafe fn envid2env(envid: u32, checkperm: bool) -> Result<*mut EnvNode, KError> {
+pub fn envid2env(envid: u32, checkperm: bool) -> Result<usize, KError> {
+    let cur_index = CUR_ENV_IDX.load(SeqCst);
     if 0 == envid {
-        return Ok(CUR_ENV);
+        return Ok(cur_index);
     }
-    let e = (addr_of_mut!(ENVS) as *mut EnvNode).add(ENVX!(envid as usize));
-    if (*(*e).data).status == EnvStatus::Free || (*(*e).data).id != envid {
+    let e = ENVX!(envid as usize);
+    let t_id = ENVS_DATA.borrow().0[e].id;
+    let p_id = ENVS_DATA.borrow().0[e].parent_id;
+
+    if ENVS_DATA.borrow().0[e].status == EnvStatus::Free || t_id != envid {
         return Err(KError::BadEnv);
     }
 
     // Need to check the perm
     if checkperm
-        && (((*(*e).data).id != (*(*CUR_ENV).data).id
-            && (*(*e).data).parent_id != (*(*CUR_ENV).data).id)
-            || CUR_ENV.is_null())
+        && ((t_id != ENVS_DATA.borrow().0[cur_index].id
+            && p_id != ENVS_DATA.borrow().0[cur_index].id)
+            || cur_index == NENV)
     {
         Err(KError::BadEnv)
     } else {
@@ -301,8 +325,8 @@ pub unsafe fn envid2env(envid: u32, checkperm: bool) -> Result<*mut EnvNode, KEr
 ///
 /// # Safety
 /// The `binary` **SHALL** be readable for `size` bytes.
-pub unsafe fn load_icode(e: *mut EnvNode, binary: *const u8, size: usize) {
-    let mapper = |env: *const EnvNode,
+fn load_icode(e: usize, binary: *const u8, size: usize) {
+    let mapper = |env_index: usize,
                   va: usize,
                   offset: isize,
                   perm: u32,
@@ -311,13 +335,23 @@ pub unsafe fn load_icode(e: *mut EnvNode, binary: *const u8, size: usize) {
      -> Result<(), KError> {
         let p = page_alloc()?;
         if !src.is_null() {
-            copy_nonoverlapping(
-                src,
-                (page2kva!(p, *PAGES.borrow(); PageNode) as *mut u8).offset(offset),
-                len,
+            unsafe {
+                copy_nonoverlapping(
+                    src,
+                    (page2kva!(p, *PAGES.borrow(); PageNode) as *mut u8).offset(offset),
+                    len,
+                )
+            }
+        }
+        unsafe {
+            page_insert(
+                ENVS_DATA.borrow().0[env_index].pgdir,
+                va,
+                ENVS_DATA.borrow().0[env_index].asid,
+                perm,
+                p,
             )
         }
-        page_insert((*(*env).data).pgdir, va, (*(*env).data).asid, perm, p)
     };
 
     let ehdr = Elf32Ehdr::from(binary, size);
@@ -325,28 +359,30 @@ pub unsafe fn load_icode(e: *mut EnvNode, binary: *const u8, size: usize) {
         panic!("Bad elf detected!");
     }
 
-    (*ehdr).foreach(|ph_off| {
-        let ph = binary.add(ph_off as usize) as *const Elf32Phdr;
-        if (*ph).stype == PT_LOAD {
-            elf_load_seg(ph, binary.add((*ph).offset as usize), mapper, e).unwrap();
-        }
-    });
+    unsafe {
+        (*ehdr).foreach(|ph_off| {
+            let ph = binary.add(ph_off as usize) as *const Elf32Phdr;
+            if (*ph).stype == PT_LOAD {
+                elf_load_seg(ph, binary.add((*ph).offset as usize), mapper, e).unwrap();
+            }
+        });
+    }
 
-    (*(*e).data).trap_frame.cp0_epc = (*ehdr).entry;
+    ENVS_DATA.borrow_mut().0[e].trap_frame.cp0_epc = unsafe { (*ehdr).entry };
 }
 
 /// Create an env and load the icode, set the priority. For **tests** mainly.
 ///
 /// # Safety
 /// The `binary` **SHALL** be readable for `size` bytes.
-pub unsafe fn env_create(binary: *const u8, size: usize, priority: u32) -> Option<*mut EnvNode> {
+pub unsafe fn env_create(binary: *const u8, size: usize, priority: u32) -> Option<usize> {
     let e = env_alloc(0).ok()?;
 
-    (*(*e).data).priority = priority;
-    (*(*e).data).status = EnvStatus::Runnable;
+    ENVS_DATA.borrow_mut().0[e].priority = priority;
+    ENVS_DATA.borrow_mut().0[e].status = EnvStatus::Runnable;
 
     load_icode(e, binary, size);
-    ENV_SCHE_LIST.insert_head(e);
+    ENV_SCHE_LIST.borrow_mut().insert_head(e);
 
     Some(e)
 }
@@ -356,34 +392,40 @@ extern "C" {
     pub fn env_pop_tf(_1: *const TrapFrame, _2: u32) -> !;
 }
 
-/// Run before the `env_run` for **tests** only
-pub static mut PRE_ENV_RUN: fn(*mut EnvNode) = |_| {};
+// / Run before the `env_run` for **tests** only
+// pub static mut PRE_ENV_RUN: fn(*mut EnvNode) = |_| {};
 
 /// Run the env. Save the [CUR_ENV]'s trapframe if `CUR_ENV` exists.
 ///
 /// # Safety
 /// The `env` **SHALL** be valid and runnable.
-pub unsafe fn env_run(env: *mut EnvNode) -> ! {
+pub fn env_run(env_index: usize) -> ! {
+    let mut env_data = ENVS_DATA.borrow_mut();
     assert_eq!(
         EnvStatus::Runnable,
-        (*(*env).data).status,
+        env_data.0[env_index].status,
         "Id: {}",
-        (*(*env).data).id
+        env_data.0[env_index].id
     );
 
-    PRE_ENV_RUN(env);
+    // PRE_ENV_RUN(env);
+    let cur_env_idx = CUR_ENV_IDX.load(SeqCst);
 
-    if !CUR_ENV.is_null() {
-        (*(*CUR_ENV).data).trap_frame = *((KSTACKTOP as *const TrapFrame).sub(1));
+    if cur_env_idx != NENV {
+        unsafe {
+            env_data.0[cur_env_idx].trap_frame = *((KSTACKTOP as *const TrapFrame).sub(1));
+        }
     }
 
-    CUR_ENV = env;
-    (*(*CUR_ENV).data).env_runs += 1;
+    CUR_ENV_IDX.store(env_index, SeqCst);
+    env_data.0[env_index].env_runs += 1;
 
-    *CUR_PGDIR.borrow_mut() = (*(*CUR_ENV).data).pgdir;
+    *CUR_PGDIR.borrow_mut() = env_data.0[env_index].pgdir;
 
-    env_pop_tf(
-        addr_of!((*(*CUR_ENV).data).trap_frame),
-        (*(*CUR_ENV).data).asid,
-    );
+    let tf = addr_of!(env_data.0[env_index].trap_frame);
+    let asid = env_data.0[env_index].asid;
+    drop(env_data);
+    unsafe {
+        env_pop_tf(tf, asid);
+    }
 }

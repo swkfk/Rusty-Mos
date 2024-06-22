@@ -1,11 +1,11 @@
 //! Do the schedule job.
 
-use crate::kdef::env::EnvStatus;
-
-use super::env::{env_run, CUR_ENV, ENV_SCHE_LIST};
+use super::env::{env_run, CUR_ENV_IDX, ENVS_DATA, ENV_SCHE_LIST};
+use crate::kdef::env::{EnvStatus, NENV};
+use core::sync::atomic::{AtomicU32, Ordering::SeqCst};
 
 /// Record the env's rest time-slice for scheduling.
-static mut ENV_REST_COUNT: u32 = 0;
+static ENV_REST_COUNT: AtomicU32 = AtomicU32::new(0);
 
 /// Schedule the envs. If `yield`, the current env will be moved to the tail
 /// of the schedule list. Otherwise, the strategy will judge the rest time the
@@ -26,24 +26,25 @@ static mut ENV_REST_COUNT: u32 = 0;
 /// # Safety
 /// Actually, the list and the current env pointer **SHALL** be valid.
 #[no_mangle]
-pub unsafe fn schedule(r#yield: bool) -> ! {
-    let mut env = CUR_ENV;
+pub fn schedule(r#yield: bool) -> ! {
+    let mut env = CUR_ENV_IDX.load(SeqCst);
     if r#yield
-        || ENV_REST_COUNT == 0
-        || env.is_null()
-        || (*(*env).data).status != EnvStatus::Runnable
+        || ENV_REST_COUNT.load(SeqCst) == 0
+        || env == NENV
+        || ENVS_DATA.borrow().0[env].status != EnvStatus::Runnable
     {
-        if !env.is_null() && (*(*env).data).status == EnvStatus::Runnable {
-            ENV_SCHE_LIST.remove(env);
-            ENV_SCHE_LIST.insert_tail(env);
+        if env != NENV && ENVS_DATA.borrow().0[env].status == EnvStatus::Runnable {
+            ENV_SCHE_LIST.borrow_mut().remove(env);
+            ENV_SCHE_LIST.borrow_mut().insert_tail(env);
         }
-        if ENV_SCHE_LIST.empty() {
+        if ENV_SCHE_LIST.borrow().empty() {
             panic!("Schedule queue is empty. Terminated!");
         }
-        env = ENV_SCHE_LIST.head; // TODO: Add a method for the list
-        ENV_REST_COUNT = (*(*env).data).priority;
+        env = ENV_SCHE_LIST.borrow().peek_head().unwrap();
+        ENV_REST_COUNT.store(ENVS_DATA.borrow().0[env].priority, SeqCst);
     }
 
-    ENV_REST_COUNT -= 1;
+    let _count = ENV_REST_COUNT.fetch_sub(1, SeqCst);
+
     env_run(env);
 }

@@ -3,7 +3,6 @@ use core::{cmp::min, ptr::null};
 use crate::{
     kdef::{
         elf::{Elf32Phdr, ElfMapperFn, PF_W},
-        env::EnvNode,
         error::KError,
         mmu::{PAGE_SIZE, PTE_D, PTE_V},
     },
@@ -22,7 +21,7 @@ pub unsafe fn elf_load_seg(
     ph: *const Elf32Phdr,
     bin: *const u8,
     map_page: ElfMapperFn,
-    data: *const EnvNode,
+    data: usize,
 ) -> Result<(), KError> {
     let va = (*ph).vaddr;
     let bin_size = (*ph).filesz;

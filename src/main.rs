@@ -64,5 +64,5 @@ pub extern "C" fn rust_mips_init(
     ENV_CREATE!("icode.b", 1);
     ENV_CREATE!("serv.b", 1);
 
-    unsafe { schedule(false) };
+    schedule(false);
 }

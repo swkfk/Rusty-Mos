@@ -2,7 +2,7 @@
 
 use core::{mem::size_of, ptr::null};
 
-use super::{env::EnvNode, error::KError};
+use super::error::KError;
 
 /// Half a word (16 bits).
 type Elf32Half = u16;
@@ -14,8 +14,7 @@ type Elf32Off = u32;
 type Elf32Addr = u32;
 
 /// The type used in the walker of the header.
-pub type ElfMapperFn =
-    fn(*const EnvNode, usize, isize, u32, *const u8, usize) -> Result<(), KError>;
+pub type ElfMapperFn = fn(usize, usize, isize, u32, *const u8, usize) -> Result<(), KError>;
 
 /// The magic number size for elf file.
 const EI_NIDNET: usize = 16;
