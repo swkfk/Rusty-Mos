@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/memory/pmap.rs`."><title>pmap.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (684b3553f 2024-06-20)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/memory/pmap.rs`."><title>pmap.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (c1b336cb6 2024-06-21)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -211,9 +211,15 @@
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::{mem::size_of, ptr};
 
 <span class="kw">use </span><span class="kw">crate</span>::utils::linked_list::{LinkList, LinkNode};
+<span class="kw">use </span><span class="kw">crate</span>::utils::sync_ref_cell::SyncImplRef;
 <span class="kw">use crate</span>::{
     debugln,
     kdef::{
@@ -225,11 +231,11 @@
 
 <span class="kw">use </span><span class="kw">super</span>::tlbex::tlb_invalidate;
 
-<span class="kw">pub static </span><span class="kw-2">mut </span>CUR_PGDIR: <span class="kw-2">*mut </span>Pde = ptr::null_mut();
-<span class="kw">pub static </span><span class="kw-2">mut </span>PAGES: <span class="kw-2">*mut </span>PageNode = core::ptr::null_mut();
-<span class="kw">pub static </span><span class="kw-2">mut </span>PAGE_FREE_LIST: PageList = PageList::new();
-<span class="kw">pub static </span><span class="kw-2">mut </span>KERNEL_HEAP: <span class="kw-2">*mut </span>PageNode = core::ptr::null_mut();
-<span class="kw">pub static </span><span class="kw-2">mut </span>NPAGE: usize = <span class="number">0</span>;
+<span class="kw">pub static </span>CUR_PGDIR: SyncImplRef&lt;<span class="kw-2">*mut </span>Pde&gt; = SyncImplRef::new(ptr::null_mut());
+<span class="kw">pub static </span>PAGES: SyncImplRef&lt;<span class="kw-2">*mut </span>PageNode&gt; = SyncImplRef::new(core::ptr::null_mut());
+<span class="kw">pub static </span>PAGE_FREE_LIST: SyncImplRef&lt;PageList&gt; = SyncImplRef::new(PageList::new());
+<span class="kw">pub static </span>KERN_HEAP: SyncImplRef&lt;<span class="kw-2">*mut </span>PageNode&gt; = SyncImplRef::new(core::ptr::null_mut());
+<span class="kw">pub static </span>NPAGE: SyncImplRef&lt;usize&gt; = SyncImplRef::new(<span class="number">0</span>);
 
 <span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
 
@@ -244,11 +250,11 @@
 }
 
 <span class="kw">pub fn </span>mips_detect_memory(memsize: usize) {
-    <span class="kw">unsafe </span>{ NPAGE = memsize / <span class="number">4096 </span>}
+    <span class="kw-2">*</span>NPAGE.borrow_mut() = memsize / <span class="number">4096</span>;
     <span class="macro">println!</span>(
         <span class="string">"Memory Size: {} KiB; Page Number: {}."</span>,
         memsize / <span class="number">1024</span>,
-        <span class="kw">unsafe </span>{ NPAGE }
+        <span class="kw-2">*</span>NPAGE.borrow()
     );
 }
 
@@ -284,50 +290,52 @@
 }
 
 <span class="kw">pub fn </span>mips_vm_init(freemem: <span class="kw-2">&amp;mut </span>usize, memsize: usize) {
-    <span class="kw">unsafe </span>{
-        PAGES = alloc(
-            freemem,
-            memsize,
-            NPAGE * size_of::&lt;PageNode&gt;(),
-            PAGE_SIZE,
-            <span class="bool-val">true</span>,
-        );
-        <span class="macro">println!</span>(<span class="string">"Pages are to the memeory 0x{:x}"</span>, freemem);
-        KERNEL_HEAP = alloc(freemem, memsize, <span class="number">512 </span>* PAGE_SIZE, PAGE_SIZE, <span class="bool-val">true</span>);
-        <span class="kw">crate</span>::BUDDY_ALLOCATOR.init(
-            <span class="macro">pa2page!</span>(<span class="macro">PADDR!</span>(KERNEL_HEAP <span class="kw">as </span>usize), PAGES; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>PageNode,
-            <span class="number">512 </span>* PAGE_SIZE,
-        );
-        <span class="macro">println!</span>(<span class="string">"Heaps are to the memeory 0x{:x}"</span>, freemem);
-    }
+    <span class="kw-2">*</span>PAGES.borrow_mut() = alloc(
+        freemem,
+        memsize,
+        <span class="kw-2">*</span>NPAGE.borrow() * size_of::&lt;PageNode&gt;(),
+        PAGE_SIZE,
+        <span class="bool-val">true</span>,
+    );
+    <span class="macro">println!</span>(<span class="string">"Pages are to the memeory 0x{:x}"</span>, freemem);
+    <span class="kw-2">*</span>KERN_HEAP.borrow_mut() = alloc(freemem, memsize, <span class="number">512 </span>* PAGE_SIZE, PAGE_SIZE, <span class="bool-val">true</span>);
+    <span class="kw">let </span>page_start =
+        <span class="macro">pa2page!</span>(<span class="macro">PADDR!</span>(<span class="kw-2">*</span>KERN_HEAP.borrow() <span class="kw">as </span>usize), <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>PageNode;
+    <span class="kw">unsafe </span>{ <span class="kw">crate</span>::BUDDY_ALLOCATOR.init(page_start, <span class="number">512 </span>* PAGE_SIZE) }
+
+    <span class="macro">println!</span>(<span class="string">"Heaps are to the memeory 0x{:x}"</span>, freemem);
     <span class="macro">debugln!</span>(<span class="string">"&gt; pmap.rs: mips vm init success"</span>);
 }
 
 <span class="kw">pub fn </span>page_init(freemem: <span class="kw-2">&amp;mut </span>usize) {
-    <span class="kw">let </span>pages = <span class="kw">unsafe </span>{ PAGES };
+    <span class="kw">let </span>pages = <span class="kw-2">*</span>PAGES.borrow_mut();
 
     <span class="kw-2">*</span>freemem = <span class="macro">ROUND!</span>(<span class="kw-2">*</span>freemem; PAGE_SIZE);
 
     <span class="kw">let </span><span class="kw-2">mut </span>page_id = <span class="number">0</span>;
-    <span class="kw">while </span>page_id &lt; <span class="kw">unsafe </span>{ NPAGE } &amp;&amp; page_id &lt;&lt; PGSHIFT &lt; <span class="macro">PADDR!</span>(<span class="kw-2">*</span>freemem) {
+    <span class="kw">while </span>page_id &lt; <span class="kw-2">*</span>NPAGE.borrow() &amp;&amp; page_id &lt;&lt; PGSHIFT &lt; <span class="macro">PADDR!</span>(<span class="kw-2">*</span>freemem) {
         <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span><span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)).data).pp_ref = <span class="number">1 </span>};
         page_id += <span class="number">1</span>;
     }
 
     <span class="macro">debugln!</span>(<span class="string">"&gt; pmap.rs: pages are used for {}"</span>, page_id);
 
-    <span class="kw">while </span>page_id &lt; <span class="kw">unsafe </span>{ NPAGE } {
+    <span class="kw">while </span>page_id &lt; <span class="kw-2">*</span>NPAGE.borrow() {
         <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span><span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)).data).pp_ref = <span class="number">0 </span>};
-        <span class="kw">unsafe </span>{ PAGE_FREE_LIST.insert_head(<span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)) };
+        <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).insert_head(<span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)) };
         page_id += <span class="number">1</span>;
     }
 }
 
 <span class="kw">pub fn </span>page_alloc() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">*mut </span>PageNode, KError&gt; {
-    <span class="kw">match unsafe </span>{ PAGE_FREE_LIST.pop_head() } {
+    <span class="kw">match unsafe </span>{ (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).pop_head() } {
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(KError::NoMem),
         <span class="prelude-val">Some</span>(pp) =&gt; <span class="kw">unsafe </span>{
-            ptr::write_bytes(<span class="macro">page2kva!</span>(pp, PAGES; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u8, <span class="number">0</span>, PAGE_SIZE);
+            ptr::write_bytes(
+                <span class="macro">page2kva!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u8,
+                <span class="number">0</span>,
+                PAGE_SIZE,
+            );
             <span class="prelude-val">Ok</span>(pp)
         },
     }
@@ -335,7 +343,7 @@
 
 <span class="kw">pub fn </span>page_free(page: <span class="kw-2">&amp;mut *mut </span>PageNode) {
     <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="kw">unsafe </span>{ <span class="kw-2">**</span>page }.data.pp_ref);
-    <span class="kw">unsafe </span>{ PAGE_FREE_LIST.insert_head(<span class="kw-2">*</span>page) };
+    <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).insert_head(<span class="kw-2">*</span>page) };
 }
 
 <span class="kw">pub fn </span>page_decref(page: <span class="kw-2">&amp;mut *mut </span>PageNode) {
@@ -355,7 +363,9 @@
             <span class="kw">unsafe </span>{
                 ptr::write(
                     pgdir_entryp,
-                    (<span class="macro">PTE_ADDR!</span>(<span class="macro">page2pa!</span>(pp, PAGES; PageNode)) <span class="kw">as </span>Pte | PTE_C_CACHEABLE | PTE_V),
+                    (<span class="macro">PTE_ADDR!</span>(<span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode)) <span class="kw">as </span>Pte
+                        | PTE_C_CACHEABLE
+                        | PTE_V),
                 );
                 (<span class="kw-2">*</span>pp).data.pp_ref = <span class="number">1</span>;
             }
@@ -380,13 +390,13 @@
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), KError&gt; {
     <span class="kw">if let </span><span class="prelude-val">Ok</span>(pte) = pgdir_walk(pgdir, va, <span class="bool-val">false</span>) {
         <span class="kw">if </span>!pte.is_null() &amp;&amp; <span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte &amp; PTE_V } != <span class="number">0 </span>{
-            <span class="kw">if </span>pp <span class="kw">as </span>usize != <span class="macro">pa2page!</span>(<span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte }, PAGES; PageNode) {
+            <span class="kw">if </span>pp <span class="kw">as </span>usize != <span class="macro">pa2page!</span>(<span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte }, <span class="kw-2">*</span>PAGES.borrow(); PageNode) {
                 page_remove(pgdir, va, asid);
             } <span class="kw">else </span>{
                 tlb_invalidate(asid, va);
                 ptr::write(
                     pte,
-                    <span class="macro">page2pa!</span>(pp, PAGES; PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V,
+                    <span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V,
                 );
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(());
             }
@@ -397,7 +407,7 @@
     <span class="kw">let </span>pte = pgdir_walk(pgdir, va, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
     ptr::write(
         pte,
-        <span class="macro">page2pa!</span>(pp, PAGES; PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V,
+        <span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V,
     );
     (<span class="kw-2">*</span>pp).data.pp_ref += <span class="number">1</span>;
 
@@ -409,7 +419,7 @@
         <span class="kw">if </span>pte.is_null() || <span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte &amp; PTE_V == <span class="number">0 </span>} {
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
-            <span class="kw">let </span>pp = <span class="kw">unsafe </span>{ <span class="macro">pa2page!</span>( <span class="kw-2">*</span>pte , PAGES; PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>PageNode };
+            <span class="kw">let </span>pp = <span class="kw">unsafe </span>{ <span class="macro">pa2page!</span>( <span class="kw-2">*</span>pte , <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>PageNode };
             <span class="prelude-val">Some</span>((pp, pte))
         }
     } <span class="kw">else </span>{

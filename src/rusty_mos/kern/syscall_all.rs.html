@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/kern/syscall_all.rs`."><title>syscall_all.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (684b3553f 2024-06-20)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/kern/syscall_all.rs`."><title>syscall_all.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (c1b336cb6 2024-06-21)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -374,9 +374,39 @@
 <a href="#374" id="374">374</a>
 <a href="#375" id="375">375</a>
 <a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::{
     fmt::{Display, Write},
     mem::size_of,
+    sync::atomic::Ordering::SeqCst,
 };
 
 <span class="kw">use crate</span>::{
@@ -392,7 +422,7 @@
 };
 
 <span class="kw">use super</span>::{
-    env::{env_alloc, envid2env, CUR_ENV, ENV_SCHE_LIST},
+    env::{env_alloc, envid2env, CUR_ENV_IDX, ENVS_DATA, ENV_SCHE_LIST},
     io::{ioread_into_va, iowrite_from_va},
     machine::{print_charc, scan_charc},
     sched::schedule,
@@ -417,14 +447,14 @@
 </span>}
 
 <span class="kw">fn </span>sys_getenvid() -&gt; u32 {
-    <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).id }
+    ENVS_DATA.borrow().<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].id
 }
 
 <span class="kw">fn </span>sys_yield() -&gt; ! {
-    <span class="kw">unsafe </span>{ schedule(<span class="bool-val">true</span>) }
+    schedule(<span class="bool-val">true</span>)
 }
 
-<span class="kw">unsafe fn </span>sys_env_destroy(envid: u32) -&gt; u32 {
+<span class="kw">fn </span>sys_env_destroy(envid: u32) -&gt; u32 {
     <span class="kw">let </span>e = envid2env(envid, <span class="bool-val">true</span>);
     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = e {
         <span class="kw">return </span>e.into();
@@ -432,24 +462,24 @@
     <span class="kw">let </span>e = e.unwrap();
     <span class="macro">debugln!</span>(
         <span class="string">"% {}: Destorying {}"</span>,
-        (<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).id,
-        (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).id
+        ENVS_DATA.borrow().<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].id,
+        ENVS_DATA.borrow().<span class="number">0</span>[e].id
     );
     env_destory(e);
     <span class="number">0
 </span>}
 
-<span class="kw">unsafe fn </span>sys_set_tlb_mod_entry(envid: u32, func: u32) -&gt; u32 {
+<span class="kw">fn </span>sys_set_tlb_mod_entry(envid: u32, func: u32) -&gt; u32 {
     <span class="kw">let </span>e = envid2env(envid, <span class="bool-val">true</span>);
     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = e {
         <span class="kw">return </span>e.into();
     }
     <span class="kw">let </span>e = e.unwrap();
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).user_tlb_mod_entry = func;
+    ENVS_DATA.borrow_mut().<span class="number">0</span>[e].user_tlb_mod_entry = func;
     <span class="number">0
 </span>}
 
-<span class="kw">unsafe fn </span>sys_mem_alloc(envid: u32, va: u32, perm: u32) -&gt; u32 {
+<span class="kw">fn </span>sys_mem_alloc(envid: u32, va: u32, perm: u32) -&gt; u32 {
     <span class="kw">let </span>va = va <span class="kw">as </span>usize;
     <span class="kw">if </span>!(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>va) {
         <span class="kw">return </span>KError::Invalid.into();
@@ -464,13 +494,22 @@
         <span class="kw">return </span>e.into();
     }
     <span class="kw">let </span>pp = pp.unwrap();
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = page_insert((<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).pgdir, va, (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).asid, perm, pp) {
+    <span class="kw">let </span>r = <span class="kw">unsafe </span>{
+        page_insert(
+            ENVS_DATA.borrow().<span class="number">0</span>[e].pgdir,
+            va,
+            ENVS_DATA.borrow().<span class="number">0</span>[e].asid,
+            perm,
+            pp,
+        )
+    };
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = r {
         <span class="kw">return </span>e.into();
     }
     <span class="number">0
 </span>}
 
-<span class="kw">unsafe fn </span>sys_mem_map(src_id: u32, src_va: u32, dst_id: u32, dst_va: u32, perm: u32) -&gt; u32 {
+<span class="kw">fn </span>sys_mem_map(src_id: u32, src_va: u32, dst_id: u32, dst_va: u32, perm: u32) -&gt; u32 {
     <span class="kw">let </span>src_va = src_va <span class="kw">as </span>usize;
     <span class="kw">let </span>dst_va = dst_va <span class="kw">as </span>usize;
     <span class="kw">if </span>!(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>src_va) || !(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>dst_va) {
@@ -488,26 +527,30 @@
     }
     <span class="kw">let </span>dst_env = dst_env.unwrap();
 
-    <span class="kw">let </span>r = page_lookup((<span class="kw-2">*</span>(<span class="kw-2">*</span>src_env).data).pgdir, src_va).ok_or(KError::Invalid);
+    <span class="kw">let </span>r = page_lookup(ENVS_DATA.borrow().<span class="number">0</span>[src_env].pgdir, src_va).ok_or(KError::Invalid);
     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = r {
         <span class="kw">return </span>e.into();
     }
     <span class="kw">let </span>(pp, <span class="kw">_</span>) = r.unwrap();
 
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = page_insert(
-        (<span class="kw-2">*</span>(<span class="kw-2">*</span>dst_env).data).pgdir,
-        dst_va,
-        (<span class="kw-2">*</span>(<span class="kw-2">*</span>dst_env).data).asid,
-        perm,
-        pp,
-    ) {
+    <span class="kw">let </span>r = <span class="kw">unsafe </span>{
+        page_insert(
+            ENVS_DATA.borrow().<span class="number">0</span>[dst_env].pgdir,
+            dst_va,
+            ENVS_DATA.borrow().<span class="number">0</span>[dst_env].asid,
+            perm,
+            pp,
+        )
+    };
+
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = r {
         e.into()
     } <span class="kw">else </span>{
         <span class="number">0
     </span>}
 }
 
-<span class="kw">unsafe fn </span>sys_mem_unmap(envid: u32, va: u32) -&gt; u32 {
+<span class="kw">fn </span>sys_mem_unmap(envid: u32, va: u32) -&gt; u32 {
     <span class="kw">let </span>va = va <span class="kw">as </span>usize;
     <span class="kw">if </span>!(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>va) {
         <span class="kw">return </span>KError::Invalid.into();
@@ -517,24 +560,34 @@
         <span class="kw">return </span>e.into();
     }
     <span class="kw">let </span>e = e.unwrap();
-    page_remove((<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).pgdir, va, (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).asid);
+    page_remove(
+        ENVS_DATA.borrow().<span class="number">0</span>[e].pgdir,
+        va,
+        ENVS_DATA.borrow().<span class="number">0</span>[e].asid,
+    );
     <span class="number">0
 </span>}
 
-<span class="kw">unsafe fn </span>sys_exofork() -&gt; u32 {
-    <span class="kw">let </span>e = env_alloc((<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).id);
+<span class="kw">fn </span>sys_exofork() -&gt; u32 {
+    <span class="kw">let </span>env_data = ENVS_DATA.borrow();
+    <span class="kw">let </span>id = env_data.<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].id;
+    drop(env_data);
+
+    <span class="kw">let </span>e = env_alloc(id);
     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = e {
         <span class="kw">return </span>e.into();
     }
     <span class="kw">let </span>e = e.unwrap();
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).trap_frame = <span class="kw-2">*</span>((KSTACKTOP <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).sub(<span class="number">1</span>));
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).trap_frame.regs[<span class="number">2</span>] = <span class="number">0</span>;
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).status = EnvStatus::NotRunnable;
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).priority = (<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).priority;
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).id
+
+    <span class="kw">let </span><span class="kw-2">mut </span>env_data = ENVS_DATA.borrow_mut();
+    env_data.<span class="number">0</span>[e].trap_frame = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>((KSTACKTOP <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).sub(<span class="number">1</span>)) };
+    env_data.<span class="number">0</span>[e].trap_frame.regs[<span class="number">2</span>] = <span class="number">0</span>;
+    env_data.<span class="number">0</span>[e].status = EnvStatus::NotRunnable;
+    env_data.<span class="number">0</span>[e].priority = env_data.<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].priority;
+    env_data.<span class="number">0</span>[e].id
 }
 
-<span class="kw">unsafe fn </span>sys_set_env_status(envid: u32, status: EnvStatus) -&gt; u32 {
+<span class="kw">fn </span>sys_set_env_status(envid: u32, status: EnvStatus) -&gt; u32 {
     <span class="kw">if </span>status != EnvStatus::NotRunnable &amp;&amp; status != EnvStatus::Runnable {
         <span class="kw">return </span>KError::Invalid.into();
     }
@@ -544,21 +597,21 @@
     }
     <span class="kw">let </span>e = e.unwrap();
 
-    <span class="kw">if </span>(<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).status == status {
+    <span class="kw">if </span>ENVS_DATA.borrow().<span class="number">0</span>[e].status == status {
         <span class="kw">return </span><span class="number">0</span>;
     }
 
     <span class="kw">if </span>status == EnvStatus::Runnable {
-        ENV_SCHE_LIST.insert_tail(e);
+        ENV_SCHE_LIST.borrow_mut().insert_tail(e);
     } <span class="kw">else </span>{
-        ENV_SCHE_LIST.remove(e);
+        ENV_SCHE_LIST.borrow_mut().remove(e);
     }
 
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).status = status;
+    ENVS_DATA.borrow_mut().<span class="number">0</span>[e].status = status;
     <span class="number">0
 </span>}
 
-<span class="kw">unsafe fn </span>sys_set_trapframe(envid: u32, trapframe: <span class="kw-2">*mut </span>TrapFrame) -&gt; u32 {
+<span class="kw">fn </span>sys_set_trapframe(envid: u32, trapframe: <span class="kw-2">*mut </span>TrapFrame) -&gt; u32 {
     <span class="kw">let </span>len = size_of::&lt;TrapFrame&gt;();
     <span class="kw">let </span>va = trapframe <span class="kw">as </span>usize;
     <span class="kw">if </span>va.checked_add(len).is_none() || va &lt; UTEMP || va + len &gt; UTOP {
@@ -570,11 +623,11 @@
     }
     <span class="kw">let </span>env = env.unwrap();
 
-    <span class="kw">if </span>env == CUR_ENV {
-        ((KSTACKTOP <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).sub(<span class="number">1</span>)).write(<span class="kw-2">*</span>trapframe);
-        (<span class="kw-2">*</span>trapframe).regs[<span class="number">2</span>]
+    <span class="kw">if </span>env == CUR_ENV_IDX.load(SeqCst) {
+        <span class="kw">unsafe </span>{ ((KSTACKTOP <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).sub(<span class="number">1</span>)).write(<span class="kw-2">*</span>trapframe) };
+        <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>trapframe).regs[<span class="number">2</span>] }
     } <span class="kw">else </span>{
-        (<span class="kw-2">*</span>(<span class="kw-2">*</span>env).data).trap_frame = <span class="kw-2">*</span>trapframe;
+        ENVS_DATA.borrow_mut().<span class="number">0</span>[env].trap_frame = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>trapframe };
         <span class="number">0
     </span>}
 }
@@ -609,28 +662,31 @@
         <span class="kw">return </span>e.into();
     }
     <span class="kw">let </span>e = e.unwrap();
-    <span class="kw">if </span>!(<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).ipc_data.receiving {
+
+    <span class="kw">let </span><span class="kw-2">mut </span>env_data = ENVS_DATA.borrow_mut();
+    <span class="kw">if </span>!env_data.<span class="number">0</span>[e].ipc_data.receiving {
         <span class="kw">return </span>KError::IpcNotRecv.into();
     }
 
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).ipc_data.value = value;
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).ipc_data.from_id = (<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).id;
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).ipc_data.perm = perm | PTE_V;
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).ipc_data.receiving = <span class="bool-val">false</span>;
+    env_data.<span class="number">0</span>[e].ipc_data.value = value;
+    env_data.<span class="number">0</span>[e].ipc_data.from_id = env_data.<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].id;
+    env_data.<span class="number">0</span>[e].ipc_data.perm = perm | PTE_V;
+    env_data.<span class="number">0</span>[e].ipc_data.receiving = <span class="bool-val">false</span>;
 
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).status = EnvStatus::Runnable;
-    ENV_SCHE_LIST.insert_tail(e);
+    env_data.<span class="number">0</span>[e].status = EnvStatus::Runnable;
+    ENV_SCHE_LIST.borrow_mut().insert_tail(e);
 
     <span class="kw">if </span>src_va != <span class="number">0 </span>{
-        <span class="kw">let </span>r = page_lookup((<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).pgdir, src_va).ok_or(KError::Invalid);
+        <span class="kw">let </span>r =
+            page_lookup(env_data.<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].pgdir, src_va).ok_or(KError::Invalid);
         <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = r {
             <span class="kw">return </span>e.into();
         }
         <span class="kw">let </span>(p, <span class="kw">_</span>) = r.unwrap();
         <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = page_insert(
-            (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).pgdir,
-            (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).ipc_data.dstva <span class="kw">as </span>usize,
-            (<span class="kw-2">*</span>(<span class="kw-2">*</span>e).data).asid,
+            env_data.<span class="number">0</span>[e].pgdir,
+            env_data.<span class="number">0</span>[e].ipc_data.dstva <span class="kw">as </span>usize,
+            env_data.<span class="number">0</span>[e].asid,
             perm,
             p,
         ) {
@@ -647,10 +703,12 @@
         <span class="kw">return </span>KError::Invalid.into();
     }
 
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).ipc_data.receiving = <span class="bool-val">true</span>;
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).ipc_data.dstva = dst_va <span class="kw">as </span>u32;
-    (<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).status = EnvStatus::NotRunnable;
-    ENV_SCHE_LIST.remove(CUR_ENV);
+    <span class="kw">let </span>cur_env_idx = CUR_ENV_IDX.load(SeqCst);
+
+    ENVS_DATA.borrow_mut().<span class="number">0</span>[cur_env_idx].ipc_data.receiving = <span class="bool-val">true</span>;
+    ENVS_DATA.borrow_mut().<span class="number">0</span>[cur_env_idx].ipc_data.dstva = dst_va <span class="kw">as </span>u32;
+    ENVS_DATA.borrow_mut().<span class="number">0</span>[cur_env_idx].status = EnvStatus::NotRunnable;
+    ENV_SCHE_LIST.borrow_mut().remove(cur_env_idx);
 
     (<span class="kw-2">*</span>(KSTACKTOP <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).sub(<span class="number">1</span>)).regs[<span class="number">2</span>] = <span class="number">0</span>;
     schedule(<span class="bool-val">true</span>);

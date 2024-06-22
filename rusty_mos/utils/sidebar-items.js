@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["bitmap","linked_list"]};
+window.SIDEBAR_ITEMS = {"mod":["array_based_list","bitmap","linked_list","sync_ref_cell"]};

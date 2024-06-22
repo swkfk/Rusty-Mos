@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/memory/tlbex.rs`."><title>tlbex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (684b3553f 2024-06-20)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/memory/tlbex.rs`."><title>tlbex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (c1b336cb6 2024-06-21)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -93,18 +93,22 @@
 <a href="#93" id="93">93</a>
 <a href="#94" id="94">94</a>
 <a href="#95" id="95">95</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>core::mem::{size_of, size_of_val};
-
-<span class="kw">use crate</span>::{
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     kdef::mmu::{
         NASID, PAGE_SIZE, PGSHIFT, PTE_D, UENVS, ULIM, UPAGES, USTACKTOP, UTEMP, UVPT, UXSTACKTOP,
     },
+    kern::env::ENVS_DATA,
     GEN_MASK, PTE_ADDR,
 };
+<span class="kw">use </span>core::mem::{size_of, size_of_val};
+<span class="kw">use </span>core::sync::atomic::Ordering::SeqCst;
 
 <span class="kw">use </span><span class="kw">crate</span>::memory::pmap::{page_alloc, page_insert, page_lookup, Pde, Pte, CUR_PGDIR};
 
-<span class="kw">use </span><span class="kw">crate</span>::kern::{env::CUR_ENV, trap::TrapFrame};
+<span class="kw">use </span><span class="kw">crate</span>::kern::{env::CUR_ENV_IDX, trap::TrapFrame};
 
 <span class="kw">extern </span><span class="string">"C" </span>{
     <span class="kw">pub fn </span>tlb_out(entryhi: u32);
@@ -153,16 +157,17 @@
 </span><span class="kw">pub fn </span>_do_tlb_refill(pentrylo: <span class="kw-2">&amp;mut </span>[u32; <span class="number">2</span>], va: usize, asid: u32) {
     tlb_invalidate(asid, va);
 
-    <span class="kw">unsafe </span>{
-        <span class="kw">loop </span>{
-            <span class="kw">match </span>page_lookup(CUR_PGDIR, va) {
-                <span class="prelude-val">None </span>=&gt; passive_alloc(va, CUR_PGDIR, asid),
-                <span class="prelude-val">Some</span>((<span class="kw">_</span>, ppte)) =&gt; {
-                    <span class="kw">let </span>ppte = (ppte <span class="kw">as </span>u32 &amp; !<span class="number">0x7</span>) <span class="kw">as </span><span class="kw-2">*mut </span>Pte;
+    <span class="kw">loop </span>{
+        <span class="kw">let </span>cur_pgdir = <span class="kw-2">*</span>CUR_PGDIR.borrow();
+        <span class="kw">match </span>page_lookup(cur_pgdir, va) {
+            <span class="prelude-val">None </span>=&gt; passive_alloc(va, cur_pgdir, asid),
+            <span class="prelude-val">Some</span>((<span class="kw">_</span>, ppte)) =&gt; {
+                <span class="kw">let </span>ppte = (ppte <span class="kw">as </span>u32 &amp; !<span class="number">0x7</span>) <span class="kw">as </span><span class="kw-2">*mut </span>Pte;
+                <span class="kw">unsafe </span>{
                     pentrylo[<span class="number">0</span>] = <span class="kw-2">*</span>ppte &gt;&gt; <span class="number">6</span>;
                     pentrylo[<span class="number">1</span>] = <span class="kw-2">*</span>((ppte <span class="kw">as </span>usize + <span class="number">4</span>) <span class="kw">as </span><span class="kw-2">*mut </span>Pte) &gt;&gt; <span class="number">6</span>;
-                    <span class="kw">break</span>;
                 }
+                <span class="kw">break</span>;
             }
         }
     }
@@ -179,11 +184,12 @@
     (<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] -= size_of::&lt;TrapFrame&gt;() <span class="kw">as </span>u32;
     ((<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).write(stored_trapframe);
     <span class="comment">// Pte was ignored in the C-Edition Mos
-    </span><span class="kw">let _ </span>= page_lookup(CUR_PGDIR, (<span class="kw-2">*</span>trapframe).cp0_badvaddr <span class="kw">as </span>usize);
-    <span class="kw">if </span>(<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).user_tlb_mod_entry != <span class="number">0 </span>{
+    </span><span class="kw">let _ </span>= page_lookup(<span class="kw-2">*</span>CUR_PGDIR.borrow(), (<span class="kw-2">*</span>trapframe).cp0_badvaddr <span class="kw">as </span>usize);
+    <span class="kw">let </span>tlb_entry = ENVS_DATA.borrow().<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].user_tlb_mod_entry;
+    <span class="kw">if </span>tlb_entry != <span class="number">0 </span>{
         (<span class="kw-2">*</span>trapframe).regs[<span class="number">4</span>] = (<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>];
         (<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] -= size_of_val(<span class="kw-2">&amp;</span>(<span class="kw-2">*</span>trapframe).regs[<span class="number">4</span>]) <span class="kw">as </span>u32;
-        (<span class="kw-2">*</span>trapframe).cp0_epc = (<span class="kw-2">*</span>(<span class="kw-2">*</span>CUR_ENV).data).user_tlb_mod_entry;
+        (<span class="kw-2">*</span>trapframe).cp0_epc = tlb_entry;
     } <span class="kw">else </span>{
         <span class="macro">panic!</span>(<span class="string">"TLB Mod but no user handler registered"</span>)
     }
