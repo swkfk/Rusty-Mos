@@ -34,15 +34,13 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
         }
     }
 
-    /// # Safety
-    ///
-    unsafe fn init(&mut self, page_start: *mut PageNode, size: usize) {
+    fn init(&mut self, page_start: *mut PageNode, size: usize) {
         self.page_start = page_start;
         let page_count = size / PAGE_SIZE;
         let mut index = 0;
         for i in (0..CCOUNT).rev() {
             while index < page_count {
-                self.free_list[i].insert_head(page_start.add(index));
+                unsafe { self.free_list[i].insert_head(page_start.add(index)) };
                 index += 1 << i;
             }
         }
@@ -50,7 +48,7 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
 }
 
 impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
-    unsafe fn alloc(&mut self, layout: core::alloc::Layout) -> *mut u8 {
+    fn alloc(&mut self, layout: core::alloc::Layout) -> *mut u8 {
         let page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
         let page_count = max(page_count, 1);
         let category = page_count.trailing_zeros() as usize;
@@ -69,7 +67,7 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
             let allocated = self.free_list[i].pop_head().unwrap();
             let mut page = allocated as *mut PageNode;
             for j in category..=i {
-                page = page.add(1 << j);
+                page = page.wrapping_add(1 << j);
                 self.free_list[j].insert_head(page);
             }
             let kva = page2kva!(allocated, *PAGES.borrow(); PageNode);
@@ -84,9 +82,9 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
         null_mut()
     }
 
-    unsafe fn dealloc(&mut self, ptr: *mut u8, layout: core::alloc::Layout) {
+    fn dealloc(&mut self, ptr: *mut u8, layout: core::alloc::Layout) {
         let p = pa2page!(PADDR!(ptr as usize), *PAGES.borrow(); PageNode) as *mut PageNode;
-        let mut page_index = p.offset_from(self.page_start) as usize;
+        let mut page_index = unsafe { p.offset_from(self.page_start) } as usize;
         let page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
         let page_count = max(page_count, 1);
         let category = page_count.trailing_zeros() as usize;
@@ -95,15 +93,15 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
             let buddy = page_index ^ (1 << i);
             let mut list = self.free_list[i].head;
             while i != CCOUNT - 1 && !list.is_null() {
-                if buddy == list.offset_from(self.page_start) as usize {
-                    PageList::remove(self.page_start.add(buddy));
+                if buddy == unsafe { list.offset_from(self.page_start) } as usize {
+                    unsafe { PageList::remove(self.page_start.add(buddy)) };
                     page_index = min(page_index, buddy);
                     continue 'iter_cate;
                 }
-                list = (*list).next;
+                unsafe { list = (*list).next };
             }
             // Not find or reach the end
-            self.free_list[i].insert_head(self.page_start.add(page_index));
+            unsafe { self.free_list[i].insert_head(self.page_start.add(page_index)) };
             break;
         }
     }

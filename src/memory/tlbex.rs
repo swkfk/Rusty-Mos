@@ -17,8 +17,9 @@ extern "C" {
 }
 
 pub fn tlb_invalidate(asid: u32, va: usize) {
+    let entryhi = (va & !GEN_MASK!(PGSHIFT, 0)) as u32 | (asid & (NASID - 1));
     unsafe {
-        tlb_out((va & !GEN_MASK!(PGSHIFT, 0)) as u32 | (asid & (NASID - 1)));
+        tlb_out(entryhi);
     }
 }
 
@@ -42,17 +43,15 @@ fn passive_alloc(va: usize, pgdir: *mut Pde, asid: u32) {
     if va >= ULIM {
         panic!("Kernel address");
     }
-    unsafe {
-        let pp = page_alloc().unwrap();
-        page_insert(
-            pgdir,
-            PTE_ADDR!(va),
-            asid,
-            if (UVPT..ULIM).contains(&va) { 0 } else { PTE_D },
-            pp,
-        )
-        .unwrap();
-    }
+    let pp = page_alloc().unwrap();
+    page_insert(
+        pgdir,
+        PTE_ADDR!(va),
+        asid,
+        if (UVPT..ULIM).contains(&va) { 0 } else { PTE_D },
+        pp,
+    )
+    .unwrap();
 }
 
 #[no_mangle]
@@ -65,10 +64,10 @@ pub fn _do_tlb_refill(pentrylo: &mut [u32; 2], va: usize, asid: u32) {
             None => passive_alloc(va, cur_pgdir, asid),
             Some((_, ppte)) => {
                 let ppte = (ppte as u32 & !0x7) as *mut Pte;
-                unsafe {
-                    pentrylo[0] = *ppte >> 6;
-                    pentrylo[1] = *((ppte as usize + 4) as *mut Pte) >> 6;
-                }
+
+                pentrylo[0] = unsafe { *ppte } >> 6;
+                pentrylo[1] = unsafe { *ppte.wrapping_add(1) } >> 6;
+
                 break;
             }
         }
@@ -78,21 +77,28 @@ pub fn _do_tlb_refill(pentrylo: &mut [u32; 2], va: usize, asid: u32) {
 /// # Safety
 ///
 #[no_mangle]
-pub unsafe fn do_tlb_mod(trapframe: *mut TrapFrame) {
-    let stored_trapframe = *trapframe;
-    if !(USTACKTOP..UXSTACKTOP).contains(&((*trapframe).regs[29] as usize)) {
-        (*trapframe).regs[29] = UXSTACKTOP as u32;
+pub fn do_tlb_mod(trapframe: *mut TrapFrame) {
+    let tf = trapframe; // deceits
+    let stored_trapframe = unsafe { *tf };
+    let mut modified_trapframe = unsafe { *tf };
+    if !(USTACKTOP..UXSTACKTOP).contains(&(modified_trapframe.regs[29] as usize)) {
+        modified_trapframe.regs[29] = UXSTACKTOP as u32;
     }
-    (*trapframe).regs[29] -= size_of::<TrapFrame>() as u32;
-    ((*trapframe).regs[29] as *mut TrapFrame).write(stored_trapframe);
+    modified_trapframe.regs[29] -= size_of::<TrapFrame>() as u32;
+    let target = modified_trapframe.regs[29] as *mut TrapFrame;
+    unsafe { target.write(stored_trapframe) };
     // Pte was ignored in the C-Edition Mos
-    let _ = page_lookup(*CUR_PGDIR.borrow(), (*trapframe).cp0_badvaddr as usize);
+    let _ = page_lookup(
+        *CUR_PGDIR.borrow(),
+        modified_trapframe.cp0_badvaddr as usize,
+    );
     let tlb_entry = ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].user_tlb_mod_entry;
     if tlb_entry != 0 {
-        (*trapframe).regs[4] = (*trapframe).regs[29];
-        (*trapframe).regs[29] -= size_of_val(&(*trapframe).regs[4]) as u32;
-        (*trapframe).cp0_epc = tlb_entry;
+        modified_trapframe.regs[4] = modified_trapframe.regs[29];
+        modified_trapframe.regs[29] -= size_of_val(&modified_trapframe.regs[4]) as u32;
+        modified_trapframe.cp0_epc = tlb_entry;
     } else {
         panic!("TLB Mod but no user handler registered")
     }
+    unsafe { core::ptr::write_volatile(tf, modified_trapframe) }
 }

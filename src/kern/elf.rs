@@ -17,19 +17,21 @@ use crate::{
 /// # Safety
 /// The raw ptr **SHALL** be readable in all loadable sections and the phdr
 /// **SHALL** be valid.
-pub unsafe fn elf_load_seg(
+pub fn elf_load_seg(
     ph: *const Elf32Phdr,
     bin: *const u8,
     map_page: ElfMapperFn,
     data: usize,
 ) -> Result<(), KError> {
-    let va = (*ph).vaddr;
-    let bin_size = (*ph).filesz;
-    let seg_size = (*ph).memsz;
+    let ph_ = ph; // deceits
+    let phdr = unsafe { *ph_ };
+    let va = phdr.vaddr;
+    let bin_size = phdr.filesz;
+    let seg_size = phdr.memsz;
 
     // Load the perm. Place the dirty bit acording the section attribute.
     let mut perm = PTE_V;
-    if (*ph).flags & PF_W > 0 {
+    if phdr.flags & PF_W > 0 {
         perm |= PTE_D;
     }
 
@@ -58,7 +60,7 @@ pub unsafe fn elf_load_seg(
             va as usize + i,
             0,
             perm,
-            bin.add(i),
+            bin.wrapping_add(i),
             min(bin_size as usize - i, PAGE_SIZE),
         )?;
         i += PAGE_SIZE;

@@ -35,7 +35,7 @@ use rusty_mos::kern::env::env_create;
 macro_rules! ENV_CREATE {
     ($icode:expr, $prio:expr) => {
         let b = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/target/user/", $icode));
-        unsafe { env_create(addr_of!(*b) as *const u8, b.len(), 1) };
+        env_create(addr_of!(*b) as *const u8, b.len(), 1);
     };
 }
 

@@ -104,13 +104,13 @@ pub fn page_init(freemem: &mut usize) {
 
     while page_id < *NPAGE.borrow() {
         unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 0 };
-        unsafe { (*PAGE_FREE_LIST.borrow_mut()).insert_head(ARRAY_PTR!(pages; page_id, PageNode)) };
+        (*PAGE_FREE_LIST.borrow_mut()).insert_head(ARRAY_PTR!(pages; page_id, PageNode));
         page_id += 1;
     }
 }
 
 pub fn page_alloc() -> Result<*mut PageNode, KError> {
-    match unsafe { (*PAGE_FREE_LIST.borrow_mut()).pop_head() } {
+    match (*PAGE_FREE_LIST.borrow_mut()).pop_head() {
         None => Err(KError::NoMem),
         Some(pp) => unsafe {
             ptr::write_bytes(
@@ -125,7 +125,7 @@ pub fn page_alloc() -> Result<*mut PageNode, KError> {
 
 pub fn page_free(page: &mut *mut PageNode) {
     assert_eq!(0, unsafe { **page }.data.pp_ref);
-    unsafe { (*PAGE_FREE_LIST.borrow_mut()).insert_head(*page) };
+    (*PAGE_FREE_LIST.borrow_mut()).insert_head(*page);
 }
 
 pub fn page_decref(page: &mut *mut PageNode) {
@@ -163,23 +163,25 @@ pub fn pgdir_walk(pgdir: *mut Pde, va: usize, create: bool) -> Result<*mut Pte, 
 
 /// # Safety
 ///
-pub unsafe fn page_insert(
+pub fn page_insert(
     pgdir: *mut Pde,
     va: usize,
     asid: u32,
     perm: u32,
-    pp: *mut PageNode,
+    page: *mut PageNode,
 ) -> Result<(), KError> {
+    let pp = page; // deceits
     if let Ok(pte) = pgdir_walk(pgdir, va, false) {
         if !pte.is_null() && unsafe { *pte & PTE_V } != 0 {
             if pp as usize != pa2page!(unsafe { *pte }, *PAGES.borrow(); PageNode) {
                 page_remove(pgdir, va, asid);
             } else {
                 tlb_invalidate(asid, va);
-                ptr::write(
-                    pte,
-                    page2pa!(pp, *PAGES.borrow(); PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
-                );
+                let entry =
+                    page2pa!(pp, *PAGES.borrow(); PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V;
+                unsafe {
+                    ptr::write(pte, entry);
+                }
                 return Ok(());
             }
         }
@@ -187,11 +189,11 @@ pub unsafe fn page_insert(
 
     tlb_invalidate(asid, va);
     let pte = pgdir_walk(pgdir, va, true)?;
-    ptr::write(
-        pte,
-        page2pa!(pp, *PAGES.borrow(); PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V,
-    );
-    (*pp).data.pp_ref += 1;
+    let entry = page2pa!(pp, *PAGES.borrow(); PageNode) as Pte | perm | PTE_C_CACHEABLE | PTE_V;
+    unsafe {
+        ptr::write(pte, entry);
+        (*pp).data.pp_ref += 1;
+    }
 
     Ok(())
 }

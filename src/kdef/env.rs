@@ -5,7 +5,6 @@ use core::ptr::null_mut;
 
 use crate::kern::trap::TrapFrame;
 use crate::memory::pmap::Pde;
-use crate::utils::linked_list::{LinkList, LinkNode, TailLinkList};
 
 /// The env status enum. Compatible with the C-Like memory structure.
 #[repr(u32)]
@@ -102,24 +101,6 @@ impl EnvData {
             env_runs: 0,
             _place_holder_env_link: [0, 0],
             _place_holder_env_sched_link: [0, 0],
-        }
-    }
-}
-
-/// The env list used only in the *kernel* mode. For free list.
-pub type EnvList = LinkList<*mut EnvData>;
-/// The env tailq list used only in the *kernel* mode. For sched list.
-pub type EnvTailList = TailLinkList<*mut EnvData>;
-/// Env link node.
-pub type EnvNode = LinkNode<*mut EnvData>;
-
-impl EnvNode {
-    /// Used for the static construction. All members are filled with zero.
-    pub const fn const_construct() -> Self {
-        Self {
-            next: core::ptr::null_mut(),
-            prev: core::ptr::null_mut(),
-            data: core::ptr::null_mut(),
         }
     }
 }

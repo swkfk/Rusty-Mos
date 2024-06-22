@@ -30,13 +30,14 @@ fn sys_putchar(ch: u8) {
     print_charc(ch);
 }
 
-unsafe fn sys_print_cons(s: *const u8, num: u32) -> u32 {
+fn sys_print_cons(s: *const u8, num: u32) -> u32 {
     let num = num as usize;
     if s as usize + num > UTOP || s as usize > UTOP || s as usize > s as usize + num {
         return KError::Invalid.into();
     }
     for i in 0..num {
-        print_charc(*(s.add(i)));
+        let s = s.wrapping_add(i);
+        print_charc(unsafe { *s });
     }
     0
 }
@@ -89,15 +90,13 @@ fn sys_mem_alloc(envid: u32, va: u32, perm: u32) -> u32 {
         return e.into();
     }
     let pp = pp.unwrap();
-    let r = unsafe {
-        page_insert(
-            ENVS_DATA.borrow().0[e].pgdir,
-            va,
-            ENVS_DATA.borrow().0[e].asid,
-            perm,
-            pp,
-        )
-    };
+    let r = page_insert(
+        ENVS_DATA.borrow().0[e].pgdir,
+        va,
+        ENVS_DATA.borrow().0[e].asid,
+        perm,
+        pp,
+    );
     if let Err(e) = r {
         return e.into();
     }
@@ -128,15 +127,13 @@ fn sys_mem_map(src_id: u32, src_va: u32, dst_id: u32, dst_va: u32, perm: u32) ->
     }
     let (pp, _) = r.unwrap();
 
-    let r = unsafe {
-        page_insert(
-            ENVS_DATA.borrow().0[dst_env].pgdir,
-            dst_va,
-            ENVS_DATA.borrow().0[dst_env].asid,
-            perm,
-            pp,
-        )
-    };
+    let r = page_insert(
+        ENVS_DATA.borrow().0[dst_env].pgdir,
+        dst_va,
+        ENVS_DATA.borrow().0[dst_env].asid,
+        perm,
+        pp,
+    );
 
     if let Err(e) = r {
         e.into()
@@ -246,7 +243,7 @@ fn sys_panic(msg: *const u8) -> ! {
     panic!("{}", CLikeStr(msg));
 }
 
-unsafe fn sys_ipc_try_send(envid: u32, value: u32, src_va: u32, perm: u32) -> u32 {
+fn sys_ipc_try_send(envid: u32, value: u32, src_va: u32, perm: u32) -> u32 {
     let src_va = src_va as usize;
     if src_va != 0 && !(UTEMP..UTOP).contains(&src_va) {
         return KError::Invalid.into();
@@ -292,7 +289,7 @@ unsafe fn sys_ipc_try_send(envid: u32, value: u32, src_va: u32, perm: u32) -> u3
     0
 }
 
-unsafe fn sys_ipc_recv(dst_va: u32) -> u32 {
+fn sys_ipc_recv(dst_va: u32) -> u32 {
     let dst_va = dst_va as usize;
     if dst_va != 0 && !(UTEMP..UTOP).contains(&dst_va) {
         return KError::Invalid.into();
@@ -305,7 +302,8 @@ unsafe fn sys_ipc_recv(dst_va: u32) -> u32 {
     ENVS_DATA.borrow_mut().0[cur_env_idx].status = EnvStatus::NotRunnable;
     ENV_SCHE_LIST.borrow_mut().remove(cur_env_idx);
 
-    (*(KSTACKTOP as *mut TrapFrame).sub(1)).regs[2] = 0;
+    let ktf = (KSTACKTOP as *mut TrapFrame).wrapping_sub(1);
+    unsafe { (*ktf).regs[2] = 0 };
     schedule(true);
 }
 
@@ -387,19 +385,24 @@ pub const SYSCALL_TABLE: [SyscallRawPtr; MAX_SYS_NO] = [
 /// # Safety
 ///
 #[no_mangle]
-pub unsafe fn do_syscall(trapframe: *mut TrapFrame) {
-    let sysno = (*trapframe).regs[4];
+pub fn do_syscall(trapframe: *mut TrapFrame) {
+    let tf_p = trapframe; // deceits
+    let tf = unsafe { *tf_p };
+    let sysno = tf.regs[4];
     if !(0..MAX_SYS_NO as u32).contains(&sysno) {
-        (*trapframe).regs[2] = KError::NoSys as u32;
+        unsafe { (*tf_p).regs[2] = KError::NoSys as u32 }
     }
-    (*trapframe).cp0_epc += size_of::<u32>() as u32;
+    unsafe { (*tf_p).cp0_epc += size_of::<u32>() as u32 }
 
-    let func = core::mem::transmute::<SyscallRawPtr, SyscallFn>(SYSCALL_TABLE[sysno as usize]);
-    let arg1 = (*trapframe).regs[5];
-    let arg2 = (*trapframe).regs[6];
-    let arg3 = (*trapframe).regs[7];
-    let arg4 = ((*trapframe).regs[29] as *const u32).add(4).read();
-    let arg5 = ((*trapframe).regs[29] as *const u32).add(5).read();
+    let func =
+        unsafe { core::mem::transmute::<SyscallRawPtr, SyscallFn>(SYSCALL_TABLE[sysno as usize]) };
+    let arg1 = tf.regs[5];
+    let arg2 = tf.regs[6];
+    let arg3 = tf.regs[7];
+    let addr = (tf.regs[29] as *const u32).wrapping_add(4);
+    let arg4 = unsafe { addr.read() };
+    let addr = (tf.regs[29] as *const u32).wrapping_add(5);
+    let arg5 = unsafe { addr.read() };
 
-    (*trapframe).regs[2] = func(arg1, arg2, arg3, arg4, arg5);
+    unsafe { (*tf_p).regs[2] = func(arg1, arg2, arg3, arg4, arg5) }
 }

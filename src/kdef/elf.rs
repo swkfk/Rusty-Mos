@@ -89,6 +89,7 @@ impl Elf32Ehdr {
 /// The program segment header structure. The members are defined in the same
 /// order as in the actual elf file.
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct Elf32Phdr {
     /// The segment type.
     pub stype: Elf32Word,

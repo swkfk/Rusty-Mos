@@ -39,7 +39,7 @@ use crate::{
 pub struct EnvsWrapper<T>([T; NENV]);
 
 /// The global pgdir.
-pub static mut BASE_PGDIR: *mut Pde = null_mut();
+pub static BASE_PGDIR: SyncRef<*mut Pde> = SyncRef::new(null_mut());
 
 /// The current env.
 pub static CUR_ENV_IDX: AtomicUsize = AtomicUsize::new(NENV);
@@ -57,18 +57,16 @@ pub static ENVS_DATA: SyncRef<Aligned<EnvData, NENV>> =
 // pub static mut ENVS: EnvsWrapper<EnvNode> = EnvsWrapper([EnvNode::const_construct(); NENV]);
 
 /// Bitmap for the asid allocatoin.
-pub static mut ASID_BITMAP: [u32; (NASID / 32) as usize] = [0; (NASID / 32) as usize];
+pub static ASID_BMAP: SyncRef<[u32; NASID as usize >> 5]> = SyncRef::new([0; NASID as usize >> 5]);
 
 /// Alloc a new asid. Return an error if there is no asid remained.
 fn asid_alloc() -> Result<u32, KError> {
     for i in 0..NASID as usize {
         let index = i >> 5;
         let inner = i & 31;
-        unsafe {
-            if ASID_BITMAP[index] & (1 << inner) == 0 {
-                ASID_BITMAP[index] |= 1 << inner;
-                return Ok(i as u32);
-            }
+        if ASID_BMAP.borrow()[index] & (1 << inner) == 0 {
+            ASID_BMAP.borrow_mut()[index] |= 1 << inner;
+            return Ok(i as u32);
         }
     }
     Err(KError::NoFreeEnv)
@@ -78,7 +76,7 @@ fn asid_alloc() -> Result<u32, KError> {
 fn asid_free(i: u32) {
     let index = i as usize >> 5;
     let inner = i & 31;
-    unsafe { ASID_BITMAP[index] &= !(1 << inner) };
+    ASID_BMAP.borrow_mut()[index] &= !(1 << inner);
 }
 
 /// Map the [va, va + size) in virtual address space to the [pa, pa + size) in
@@ -90,16 +88,14 @@ fn asid_free(i: u32) {
 ///
 /// # Safety
 /// The `pgdir` **SHALL** be valid.
-unsafe fn map_segment(pgdir: *mut Pde, asid: u32, pa: usize, va: usize, size: usize, perm: u32) {
+fn map_segment(pgdir: *mut Pde, asid: u32, pa: usize, va: usize, size: usize, perm: u32) {
     assert_eq!(0, pa % PAGE_SIZE);
     assert_eq!(0, va % PAGE_SIZE);
     assert_eq!(0, size % PAGE_SIZE);
     debugln!("> env.rs: map_segment() with size=0x{:x}", size);
     for i in (0..size).step_by(PAGE_SIZE) {
-        unsafe {
-            let pp = pa2page!(pa + i, *PAGES.borrow(); PageNode) as *mut PageNode;
-            page_insert(pgdir, va + i, asid, perm, pp).unwrap();
-        }
+        let pp = pa2page!(pa + i, *PAGES.borrow(); PageNode) as *mut PageNode;
+        page_insert(pgdir, va + i, asid, perm, pp).unwrap();
     }
 }
 
@@ -130,27 +126,26 @@ pub fn env_init() {
     }
 
     let p = page_alloc().unwrap();
-    unsafe {
-        (*p).data.pp_ref += 1;
-        let base_pgdir = page2kva!(p, *PAGES.borrow(); PageNode) as *mut Pde;
-        map_segment(
-            base_pgdir,
-            0,
-            PADDR!(*PAGES.borrow() as usize),
-            UPAGES,
-            ROUND!(*NPAGE.borrow() * size_of::<PageNode>(); PAGE_SIZE),
-            PTE_G,
-        );
-        map_segment(
-            base_pgdir,
-            0,
-            PADDR!(addr_of!(ENVS_DATA.borrow().0[0]) as usize),
-            UENVS,
-            ROUND!(NENV * size_of::<EnvData>(); PAGE_SIZE),
-            PTE_G,
-        );
-        BASE_PGDIR = base_pgdir;
-    }
+
+    unsafe { (*p).data.pp_ref += 1 }
+    let base_pgdir = page2kva!(p, *PAGES.borrow(); PageNode) as *mut Pde;
+    map_segment(
+        base_pgdir,
+        0,
+        PADDR!(*PAGES.borrow() as usize),
+        UPAGES,
+        ROUND!(*NPAGE.borrow() * size_of::<PageNode>(); PAGE_SIZE),
+        PTE_G,
+    );
+    map_segment(
+        base_pgdir,
+        0,
+        PADDR!(addr_of!(ENVS_DATA.borrow().0[0]) as usize),
+        UENVS,
+        ROUND!(NENV * size_of::<EnvData>(); PAGE_SIZE),
+        PTE_G,
+    );
+    *BASE_PGDIR.borrow_mut() = base_pgdir;
 
     debugln!("> env.rs: env init sucsess");
 }
@@ -170,10 +165,10 @@ pub fn env_setup_vm(env_index: usize) -> Result<(), KError> {
 
     let env_pdgir = ENVS_DATA.borrow_mut().0[env_index].pgdir;
 
-    // memcpy
     unsafe {
+        // memcpy
         copy_nonoverlapping(
-            BASE_PGDIR.wrapping_add(PDX!(UTOP)),
+            BASE_PGDIR.borrow().wrapping_add(PDX!(UTOP)),
             env_pdgir.wrapping_add(PDX!(UTOP)),
             PDX!(UVPT) - PDX!(UTOP),
         );
@@ -343,15 +338,13 @@ fn load_icode(e: usize, binary: *const u8, size: usize) {
                 )
             }
         }
-        unsafe {
-            page_insert(
-                ENVS_DATA.borrow().0[env_index].pgdir,
-                va,
-                ENVS_DATA.borrow().0[env_index].asid,
-                perm,
-                p,
-            )
-        }
+        page_insert(
+            ENVS_DATA.borrow().0[env_index].pgdir,
+            va,
+            ENVS_DATA.borrow().0[env_index].asid,
+            perm,
+            p,
+        )
     };
 
     let ehdr = Elf32Ehdr::from(binary, size);
@@ -359,14 +352,13 @@ fn load_icode(e: usize, binary: *const u8, size: usize) {
         panic!("Bad elf detected!");
     }
 
-    unsafe {
-        (*ehdr).foreach(|ph_off| {
-            let ph = binary.add(ph_off as usize) as *const Elf32Phdr;
-            if (*ph).stype == PT_LOAD {
-                elf_load_seg(ph, binary.add((*ph).offset as usize), mapper, e).unwrap();
-            }
-        });
-    }
+    unsafe { *ehdr }.foreach(|ph_off| {
+        let ph = binary.wrapping_add(ph_off as usize) as *const Elf32Phdr;
+        let phdr = unsafe { *ph };
+        if phdr.stype == PT_LOAD {
+            elf_load_seg(ph, binary.wrapping_add(phdr.offset as usize), mapper, e).unwrap();
+        }
+    });
 
     ENVS_DATA.borrow_mut().0[e].trap_frame.cp0_epc = unsafe { (*ehdr).entry };
 }
@@ -375,7 +367,7 @@ fn load_icode(e: usize, binary: *const u8, size: usize) {
 ///
 /// # Safety
 /// The `binary` **SHALL** be readable for `size` bytes.
-pub unsafe fn env_create(binary: *const u8, size: usize, priority: u32) -> Option<usize> {
+pub fn env_create(binary: *const u8, size: usize, priority: u32) -> Option<usize> {
     let e = env_alloc(0).ok()?;
 
     ENVS_DATA.borrow_mut().0[e].priority = priority;

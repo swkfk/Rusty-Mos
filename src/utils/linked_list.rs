@@ -9,7 +9,7 @@
 //! - `prev`: pointing to the previous LinkNode's `next` field
 //!
 
-use core::ptr::{self, addr_of_mut, null_mut};
+use core::ptr;
 
 /// The head struct of the LinkList
 ///
@@ -22,21 +22,6 @@ pub struct LinkList<T: Copy> {
     /// Pointing to the first node of this link list.
     /// The list is empty if and only if the `head` is null.
     pub head: *mut LinkNode<T>,
-}
-
-/// The LinkList with its **tail** recorded
-///
-/// See also: [LinkNode]
-///
-/// # Attention
-/// Before use the TailLinkList object, the method `enable` **SHALL** be called
-/// first.
-///
-/// # Generics
-/// The type `T` indicates the data stored in the link list.
-pub struct TailLinkList<T: Copy> {
-    pub head: *mut LinkNode<T>,
-    pub tail: *mut *mut LinkNode<T>,
 }
 
 /// The node struct of the LinkList
@@ -81,14 +66,17 @@ impl<T: Copy> LinkList<T> {
     ///
     /// # Safety
     /// The parameter `item` *SHALL* be mutably-visitable!
-    pub unsafe fn insert_head(&mut self, item: *mut LinkNode<T>) {
+    pub fn insert_head(&mut self, item: *mut LinkNode<T>) {
         // If this list is not empty, the previous head's `prev` will be updated
+        let item_p = item; // deceits
         if !self.empty() {
-            (*item).next = self.head;
-            (*(self.head)).prev = ptr::addr_of_mut!((*item).next);
+            unsafe {
+                (*item_p).next = self.head;
+                (*(self.head)).prev = ptr::addr_of_mut!((*item_p).next);
+            }
         }
-        (*item).prev = ptr::addr_of_mut!(self.head);
-        self.head = item;
+        unsafe { (*item_p).prev = ptr::addr_of_mut!(self.head) }
+        self.head = item_p;
     }
 
     /// Get the first node of this list and removce it
@@ -97,7 +85,7 @@ impl<T: Copy> LinkList<T> {
     ///
     /// # Safety
     /// All things in the list *SHALL* be valid!
-    pub unsafe fn pop_head(&mut self) -> Option<*mut LinkNode<T>> {
+    pub fn pop_head(&mut self) -> Option<*mut LinkNode<T>> {
         match self.empty() {
             true => None,
             false => {
@@ -113,99 +101,14 @@ impl<T: Copy> LinkList<T> {
     /// # Safety
     /// The parameter `item` *SHALL* be mutably-visitable and *SHALL* be in an
     /// valid link list!
-    pub unsafe fn remove(item: *mut LinkNode<T>) {
-        if !(*item).next.is_null() {
-            (*((*item).next)).prev = (*item).prev;
+    pub fn remove(item: *mut LinkNode<T>) {
+        let item_p = item;
+        if !unsafe { *item_p }.next.is_null() {
+            unsafe { (*((*item_p).next)).prev = (*item_p).prev }
         }
-        *((*item).prev) = (*item).next;
-        (*item).next = ptr::null_mut();
-        (*item).prev = ptr::null_mut();
-    }
-}
-
-impl<T: Copy> Default for TailLinkList<T> {
-    /// Constructor for the default.
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<T: Copy> TailLinkList<T> {
-    /// Create an empty TailLinkList object. Not useable yet.
-    pub const fn new() -> TailLinkList<T> {
-        TailLinkList {
-            head: null_mut(),
-            tail: null_mut(),
-        }
-    }
-
-    /// Judge whether the list is empty.
-    pub fn empty(&self) -> bool {
-        self.head.is_null()
-    }
-
-    /// Make the list useable after the construction.
-    pub fn enable(&mut self) {
-        self.tail = addr_of_mut!(self.head);
-    }
-
-    /// Insert the item into the head of the list.
-    ///
-    /// # Safety
-    /// The `item` passed **SHALL NOT** be null.
-    pub unsafe fn insert_head(&mut self, item: *mut LinkNode<T>) {
-        (*item).next = self.head;
-        if !(*item).next.is_null() {
-            (*(self.head)).prev = ptr::addr_of_mut!((*item).next);
-        } else {
-            self.tail = ptr::addr_of_mut!((*item).next);
-        }
-        self.head = item;
-        (*item).prev = ptr::addr_of_mut!(self.head);
-    }
-
-    /// Insert the item into the tail of the list.
-    ///
-    /// # Safety
-    /// The `item` passed **SHALL NOT** be null.
-    pub unsafe fn insert_tail(&mut self, item: *mut LinkNode<T>) {
-        (*item).next = null_mut();
-        (*item).prev = self.tail;
-        *self.tail = item;
-        self.tail = ptr::addr_of_mut!((*item).next);
-    }
-
-    /// Get the head and remove it if the list is not empty.
-    ///
-    /// # Return
-    /// `None` -- The list is empty.
-    /// `Some(item)` -- Otherwise
-    ///
-    /// # Safety
-    /// The list **SHALL** be valid.
-    pub unsafe fn pop_head(&mut self) -> Option<*mut LinkNode<T>> {
-        match self.empty() {
-            true => None,
-            false => {
-                let item = self.head;
-                self.remove(item);
-                Some(item)
-            }
-        }
-    }
-
-    /// Remove a specified node from the list contains this node.
-    ///
-    /// # Safety
-    /// The parameter `item` *SHALL* be mutably-visitable and *SHALL* be in an
-    /// valid link list!
-    pub unsafe fn remove(&mut self, item: *mut LinkNode<T>) {
-        if !(*item).next.is_null() {
-            (*((*item).next)).prev = (*item).prev;
-        } else {
-            self.tail = (*item).prev;
-        }
-        *((*item).prev) = (*item).next;
+        unsafe { *((*item_p).prev) = (*item_p).next }
+        unsafe { (*item_p).next = ptr::null_mut() }
+        unsafe { (*item_p).prev = ptr::null_mut() }
     }
 }
 
