@@ -44,7 +44,7 @@ pub static mut ENV_FREE_LIST: EnvList = EnvList::new();
 pub static mut ENV_SCHE_LIST: EnvTailList = EnvTailList::new();
 /// The envs array in *kernel*, mapped to the [UENVS] and used by the user
 /// program.
-pub static mut ENVS_DATA: EnvsWrapper<EnvData> = EnvsWrapper([EnvData::const_construct(); NENV]);
+pub static mut ENVS_DATA: EnvsWrapper<EnvData> = EnvsWrapper([EnvData::new(); NENV]);
 /// The envs array used in the *kernel* space. The element in it has the link
 /// field to make it a link node.
 pub static mut ENVS: EnvsWrapper<EnvNode> = EnvsWrapper([EnvNode::const_construct(); NENV]);

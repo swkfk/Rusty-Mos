@@ -80,9 +80,15 @@ pub struct EnvData {
     pub env_runs: u32,
 }
 
+impl Default for EnvData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnvData {
     /// Used for the static construction. All members are filled with zero.
-    pub const fn const_construct() -> Self {
+    pub const fn new() -> Self {
         Self {
             trap_frame: TrapFrame::const_construct(),
             id: 0,
