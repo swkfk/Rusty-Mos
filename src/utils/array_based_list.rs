@@ -44,6 +44,10 @@ impl<const LEN: usize> ArrayLinkedList<LEN> {
         }
     }
 
+    pub fn peek_head(&self) -> Option<usize> {
+        self.head
+    }
+
     pub fn pop_head(&mut self) -> Option<usize> {
         match self.head {
             None => None,
@@ -74,15 +78,16 @@ impl<const LEN: usize> ArrayLinkedList<LEN> {
             None => self.head = self.array[item].next,
             Some(i) => self.array[i].next = self.array[item].next,
         }
-        if self.array[item].next.is_none() {
-            self.tail = self.array[item].prev
+        match self.array[item].next {
+            None => self.tail = self.array[item].prev,
+            Some(i) => self.array[i].prev = self.array[item].prev,
         }
         self.array[item].next = None;
         self.array[item].prev = None;
     }
 }
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, Debug)]
 pub struct ArrayLinkNode {
     pub next: Option<usize>,
     pub prev: Option<usize>,
