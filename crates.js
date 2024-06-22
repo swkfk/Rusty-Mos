@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["lock_api","rusty_mos","scopeguard","spin"];
+window.ALL_CRATES = ["rusty_mos"];

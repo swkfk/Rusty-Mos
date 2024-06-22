@@ -101,6 +101,12 @@
 <a href="#101" id="101">101</a>
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
 </pre></div><pre class="rust"><code><span class="attr">#[repr(align(<span class="number">4096</span>))]
 </span><span class="kw">pub struct </span>Aligned&lt;T, <span class="kw">const </span>LEN: usize&gt;(<span class="kw">pub </span>[T; LEN]);
 
@@ -155,11 +161,7 @@
         <span class="kw">match </span><span class="self">self</span>.head {
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
             <span class="prelude-val">Some</span>(i) =&gt; {
-                <span class="self">self</span>.head = <span class="self">self</span>.array[i].next;
-                <span class="kw">if </span><span class="self">self</span>.head.is_none() {
-                    <span class="self">self</span>.tail = <span class="prelude-val">None</span>;
-                }
-                <span class="self">self</span>.array[i].next = <span class="prelude-val">None</span>;
+                <span class="self">self</span>.remove(i);
                 <span class="prelude-val">Some</span>(i)
             }
         }
@@ -188,6 +190,16 @@
         <span class="self">self</span>.array[item].next = <span class="prelude-val">None</span>;
         <span class="self">self</span>.array[item].prev = <span class="prelude-val">None</span>;
     }
+
+    <span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, item: usize) -&gt; bool {
+        <span class="kw">if </span><span class="self">self</span>.array[item].prev.is_none()
+            &amp;&amp; <span class="self">self</span>.array[item].next.is_none()
+            &amp;&amp; (<span class="self">self</span>.head != <span class="prelude-val">Some</span>(item) || <span class="self">self</span>.tail != <span class="prelude-val">Some</span>(item))
+        {
+            <span class="kw">return </span><span class="bool-val">false</span>;
+        }
+        <span class="bool-val">true
+    </span>}
 }
 
 <span class="attr">#[derive(Clone, Copy, Default, Debug)]

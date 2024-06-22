@@ -79,6 +79,8 @@
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
 <a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::{cmp::min, ptr::null};
 
 <span class="kw">use crate</span>::{
@@ -98,19 +100,21 @@
 /// # Safety
 /// The raw ptr **SHALL** be readable in all loadable sections and the phdr
 /// **SHALL** be valid.
-</span><span class="kw">pub unsafe fn </span>elf_load_seg(
+</span><span class="kw">pub fn </span>elf_load_seg(
     ph: <span class="kw-2">*const </span>Elf32Phdr,
     bin: <span class="kw-2">*const </span>u8,
     map_page: ElfMapperFn,
     data: usize,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), KError&gt; {
-    <span class="kw">let </span>va = (<span class="kw-2">*</span>ph).vaddr;
-    <span class="kw">let </span>bin_size = (<span class="kw-2">*</span>ph).filesz;
-    <span class="kw">let </span>seg_size = (<span class="kw-2">*</span>ph).memsz;
+    <span class="kw">let </span>ph_ = ph; <span class="comment">// deceits
+    </span><span class="kw">let </span>phdr = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>ph_ };
+    <span class="kw">let </span>va = phdr.vaddr;
+    <span class="kw">let </span>bin_size = phdr.filesz;
+    <span class="kw">let </span>seg_size = phdr.memsz;
 
     <span class="comment">// Load the perm. Place the dirty bit acording the section attribute.
     </span><span class="kw">let </span><span class="kw-2">mut </span>perm = PTE_V;
-    <span class="kw">if </span>(<span class="kw-2">*</span>ph).flags &amp; PF_W &gt; <span class="number">0 </span>{
+    <span class="kw">if </span>phdr.flags &amp; PF_W &gt; <span class="number">0 </span>{
         perm |= PTE_D;
     }
 
@@ -139,7 +143,7 @@
             va <span class="kw">as </span>usize + i,
             <span class="number">0</span>,
             perm,
-            bin.add(i),
+            bin.wrapping_add(i),
             min(bin_size <span class="kw">as </span>usize - i, PAGE_SIZE),
         )<span class="question-mark">?</span>;
         i += PAGE_SIZE;

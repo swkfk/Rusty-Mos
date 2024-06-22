@@ -403,6 +403,10 @@
 <a href="#403" id="403">403</a>
 <a href="#404" id="404">404</a>
 <a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::{
     fmt::{Display, Write},
     mem::size_of,
@@ -435,13 +439,14 @@
     print_charc(ch);
 }
 
-<span class="kw">unsafe fn </span>sys_print_cons(s: <span class="kw-2">*const </span>u8, num: u32) -&gt; u32 {
+<span class="kw">fn </span>sys_print_cons(s: <span class="kw-2">*const </span>u8, num: u32) -&gt; u32 {
     <span class="kw">let </span>num = num <span class="kw">as </span>usize;
     <span class="kw">if </span>s <span class="kw">as </span>usize + num &gt; UTOP || s <span class="kw">as </span>usize &gt; UTOP || s <span class="kw">as </span>usize &gt; s <span class="kw">as </span>usize + num {
         <span class="kw">return </span>KError::Invalid.into();
     }
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num {
-        print_charc(<span class="kw-2">*</span>(s.add(i)));
+        <span class="kw">let </span>s = s.wrapping_add(i);
+        print_charc(<span class="kw">unsafe </span>{ <span class="kw-2">*</span>s });
     }
     <span class="number">0
 </span>}
@@ -494,15 +499,13 @@
         <span class="kw">return </span>e.into();
     }
     <span class="kw">let </span>pp = pp.unwrap();
-    <span class="kw">let </span>r = <span class="kw">unsafe </span>{
-        page_insert(
-            ENVS_DATA.borrow().<span class="number">0</span>[e].pgdir,
-            va,
-            ENVS_DATA.borrow().<span class="number">0</span>[e].asid,
-            perm,
-            pp,
-        )
-    };
+    <span class="kw">let </span>r = page_insert(
+        ENVS_DATA.borrow().<span class="number">0</span>[e].pgdir,
+        va,
+        ENVS_DATA.borrow().<span class="number">0</span>[e].asid,
+        perm,
+        pp,
+    );
     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = r {
         <span class="kw">return </span>e.into();
     }
@@ -533,15 +536,13 @@
     }
     <span class="kw">let </span>(pp, <span class="kw">_</span>) = r.unwrap();
 
-    <span class="kw">let </span>r = <span class="kw">unsafe </span>{
-        page_insert(
-            ENVS_DATA.borrow().<span class="number">0</span>[dst_env].pgdir,
-            dst_va,
-            ENVS_DATA.borrow().<span class="number">0</span>[dst_env].asid,
-            perm,
-            pp,
-        )
-    };
+    <span class="kw">let </span>r = page_insert(
+        ENVS_DATA.borrow().<span class="number">0</span>[dst_env].pgdir,
+        dst_va,
+        ENVS_DATA.borrow().<span class="number">0</span>[dst_env].asid,
+        perm,
+        pp,
+    );
 
     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = r {
         e.into()
@@ -651,7 +652,7 @@
     <span class="macro">panic!</span>(<span class="string">"{}"</span>, CLikeStr(msg));
 }
 
-<span class="kw">unsafe fn </span>sys_ipc_try_send(envid: u32, value: u32, src_va: u32, perm: u32) -&gt; u32 {
+<span class="kw">fn </span>sys_ipc_try_send(envid: u32, value: u32, src_va: u32, perm: u32) -&gt; u32 {
     <span class="kw">let </span>src_va = src_va <span class="kw">as </span>usize;
     <span class="kw">if </span>src_va != <span class="number">0 </span>&amp;&amp; !(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>src_va) {
         <span class="kw">return </span>KError::Invalid.into();
@@ -697,7 +698,7 @@
     <span class="number">0
 </span>}
 
-<span class="kw">unsafe fn </span>sys_ipc_recv(dst_va: u32) -&gt; u32 {
+<span class="kw">fn </span>sys_ipc_recv(dst_va: u32) -&gt; u32 {
     <span class="kw">let </span>dst_va = dst_va <span class="kw">as </span>usize;
     <span class="kw">if </span>dst_va != <span class="number">0 </span>&amp;&amp; !(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>dst_va) {
         <span class="kw">return </span>KError::Invalid.into();
@@ -710,7 +711,8 @@
     ENVS_DATA.borrow_mut().<span class="number">0</span>[cur_env_idx].status = EnvStatus::NotRunnable;
     ENV_SCHE_LIST.borrow_mut().remove(cur_env_idx);
 
-    (<span class="kw-2">*</span>(KSTACKTOP <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).sub(<span class="number">1</span>)).regs[<span class="number">2</span>] = <span class="number">0</span>;
+    <span class="kw">let </span>ktf = (KSTACKTOP <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).wrapping_sub(<span class="number">1</span>);
+    <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>ktf).regs[<span class="number">2</span>] = <span class="number">0 </span>};
     schedule(<span class="bool-val">true</span>);
 }
 
@@ -792,20 +794,26 @@
 <span class="doccomment">/// # Safety
 ///
 </span><span class="attr">#[no_mangle]
-</span><span class="kw">pub unsafe fn </span>do_syscall(trapframe: <span class="kw-2">*mut </span>TrapFrame) {
-    <span class="kw">let </span>sysno = (<span class="kw-2">*</span>trapframe).regs[<span class="number">4</span>];
+</span><span class="kw">pub fn </span>do_syscall(trapframe: <span class="kw-2">*mut </span>TrapFrame) {
+    <span class="kw">let </span>tf_p = trapframe; <span class="comment">// deceits
+    </span><span class="kw">let </span>tf = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>tf_p };
+    <span class="kw">let </span>sysno = tf.regs[<span class="number">4</span>];
     <span class="kw">if </span>!(<span class="number">0</span>..MAX_SYS_NO <span class="kw">as </span>u32).contains(<span class="kw-2">&amp;</span>sysno) {
-        (<span class="kw-2">*</span>trapframe).regs[<span class="number">2</span>] = KError::NoSys <span class="kw">as </span>u32;
+        <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>tf_p).regs[<span class="number">2</span>] = KError::NoSys <span class="kw">as </span>u32 }
+        <span class="kw">return</span>;
     }
-    (<span class="kw-2">*</span>trapframe).cp0_epc += size_of::&lt;u32&gt;() <span class="kw">as </span>u32;
+    <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>tf_p).cp0_epc += size_of::&lt;u32&gt;() <span class="kw">as </span>u32 }
 
-    <span class="kw">let </span>func = core::mem::transmute::&lt;SyscallRawPtr, SyscallFn&gt;(SYSCALL_TABLE[sysno <span class="kw">as </span>usize]);
-    <span class="kw">let </span>arg1 = (<span class="kw-2">*</span>trapframe).regs[<span class="number">5</span>];
-    <span class="kw">let </span>arg2 = (<span class="kw-2">*</span>trapframe).regs[<span class="number">6</span>];
-    <span class="kw">let </span>arg3 = (<span class="kw-2">*</span>trapframe).regs[<span class="number">7</span>];
-    <span class="kw">let </span>arg4 = ((<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] <span class="kw">as </span><span class="kw-2">*const </span>u32).add(<span class="number">4</span>).read();
-    <span class="kw">let </span>arg5 = ((<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] <span class="kw">as </span><span class="kw-2">*const </span>u32).add(<span class="number">5</span>).read();
+    <span class="kw">let </span>func =
+        <span class="kw">unsafe </span>{ core::mem::transmute::&lt;SyscallRawPtr, SyscallFn&gt;(SYSCALL_TABLE[sysno <span class="kw">as </span>usize]) };
+    <span class="kw">let </span>arg1 = tf.regs[<span class="number">5</span>];
+    <span class="kw">let </span>arg2 = tf.regs[<span class="number">6</span>];
+    <span class="kw">let </span>arg3 = tf.regs[<span class="number">7</span>];
+    <span class="kw">let </span>addr = (tf.regs[<span class="number">29</span>] <span class="kw">as </span><span class="kw-2">*const </span>u32).wrapping_add(<span class="number">4</span>);
+    <span class="kw">let </span>arg4 = <span class="kw">unsafe </span>{ addr.read() };
+    <span class="kw">let </span>addr = (tf.regs[<span class="number">29</span>] <span class="kw">as </span><span class="kw-2">*const </span>u32).wrapping_add(<span class="number">5</span>);
+    <span class="kw">let </span>arg5 = <span class="kw">unsafe </span>{ addr.read() };
 
-    (<span class="kw-2">*</span>trapframe).regs[<span class="number">2</span>] = func(arg1, arg2, arg3, arg4, arg5);
+    <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>tf_p).regs[<span class="number">2</span>] = func(arg1, arg2, arg3, arg4, arg5) }
 }
 </code></pre></div></section></main></body></html>

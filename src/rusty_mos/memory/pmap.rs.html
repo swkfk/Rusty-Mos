@@ -216,6 +216,8 @@
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
 <a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::{mem::size_of, ptr};
 
 <span class="kw">use </span><span class="kw">crate</span>::utils::linked_list::{LinkList, LinkNode};
@@ -322,13 +324,13 @@
 
     <span class="kw">while </span>page_id &lt; <span class="kw-2">*</span>NPAGE.borrow() {
         <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span><span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)).data).pp_ref = <span class="number">0 </span>};
-        <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).insert_head(<span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)) };
+        (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).insert_head(<span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode));
         page_id += <span class="number">1</span>;
     }
 }
 
 <span class="kw">pub fn </span>page_alloc() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">*mut </span>PageNode, KError&gt; {
-    <span class="kw">match unsafe </span>{ (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).pop_head() } {
+    <span class="kw">match </span>(<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).pop_head() {
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(KError::NoMem),
         <span class="prelude-val">Some</span>(pp) =&gt; <span class="kw">unsafe </span>{
             ptr::write_bytes(
@@ -343,7 +345,7 @@
 
 <span class="kw">pub fn </span>page_free(page: <span class="kw-2">&amp;mut *mut </span>PageNode) {
     <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="kw">unsafe </span>{ <span class="kw-2">**</span>page }.data.pp_ref);
-    <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).insert_head(<span class="kw-2">*</span>page) };
+    (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).insert_head(<span class="kw-2">*</span>page);
 }
 
 <span class="kw">pub fn </span>page_decref(page: <span class="kw-2">&amp;mut *mut </span>PageNode) {
@@ -381,23 +383,25 @@
 
 <span class="doccomment">/// # Safety
 ///
-</span><span class="kw">pub unsafe fn </span>page_insert(
+</span><span class="kw">pub fn </span>page_insert(
     pgdir: <span class="kw-2">*mut </span>Pde,
     va: usize,
     asid: u32,
     perm: u32,
-    pp: <span class="kw-2">*mut </span>PageNode,
+    page: <span class="kw-2">*mut </span>PageNode,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), KError&gt; {
-    <span class="kw">if let </span><span class="prelude-val">Ok</span>(pte) = pgdir_walk(pgdir, va, <span class="bool-val">false</span>) {
+    <span class="kw">let </span>pp = page; <span class="comment">// deceits
+    </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(pte) = pgdir_walk(pgdir, va, <span class="bool-val">false</span>) {
         <span class="kw">if </span>!pte.is_null() &amp;&amp; <span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte &amp; PTE_V } != <span class="number">0 </span>{
             <span class="kw">if </span>pp <span class="kw">as </span>usize != <span class="macro">pa2page!</span>(<span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte }, <span class="kw-2">*</span>PAGES.borrow(); PageNode) {
                 page_remove(pgdir, va, asid);
             } <span class="kw">else </span>{
                 tlb_invalidate(asid, va);
-                ptr::write(
-                    pte,
-                    <span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V,
-                );
+                <span class="kw">let </span>entry =
+                    <span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V;
+                <span class="kw">unsafe </span>{
+                    ptr::write(pte, entry);
+                }
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(());
             }
         }
@@ -405,11 +409,11 @@
 
     tlb_invalidate(asid, va);
     <span class="kw">let </span>pte = pgdir_walk(pgdir, va, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-    ptr::write(
-        pte,
-        <span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V,
-    );
-    (<span class="kw-2">*</span>pp).data.pp_ref += <span class="number">1</span>;
+    <span class="kw">let </span>entry = <span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span>Pte | perm | PTE_C_CACHEABLE | PTE_V;
+    <span class="kw">unsafe </span>{
+        ptr::write(pte, entry);
+        (<span class="kw-2">*</span>pp).data.pp_ref += <span class="number">1</span>;
+    }
 
     <span class="prelude-val">Ok</span>(())
 }

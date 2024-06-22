@@ -96,6 +96,12 @@
 <a href="#96" id="96">96</a>
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     kdef::mmu::{
         NASID, PAGE_SIZE, PGSHIFT, PTE_D, UENVS, ULIM, UPAGES, USTACKTOP, UTEMP, UVPT, UXSTACKTOP,
@@ -115,8 +121,9 @@
 }
 
 <span class="kw">pub fn </span>tlb_invalidate(asid: u32, va: usize) {
+    <span class="kw">let </span>entryhi = (va &amp; !<span class="macro">GEN_MASK!</span>(PGSHIFT, <span class="number">0</span>)) <span class="kw">as </span>u32 | (asid &amp; (NASID - <span class="number">1</span>));
     <span class="kw">unsafe </span>{
-        tlb_out((va &amp; !<span class="macro">GEN_MASK!</span>(PGSHIFT, <span class="number">0</span>)) <span class="kw">as </span>u32 | (asid &amp; (NASID - <span class="number">1</span>)));
+        tlb_out(entryhi);
     }
 }
 
@@ -140,17 +147,15 @@
     <span class="kw">if </span>va &gt;= ULIM {
         <span class="macro">panic!</span>(<span class="string">"Kernel address"</span>);
     }
-    <span class="kw">unsafe </span>{
-        <span class="kw">let </span>pp = page_alloc().unwrap();
-        page_insert(
-            pgdir,
-            <span class="macro">PTE_ADDR!</span>(va),
-            asid,
-            <span class="kw">if </span>(UVPT..ULIM).contains(<span class="kw-2">&amp;</span>va) { <span class="number">0 </span>} <span class="kw">else </span>{ PTE_D },
-            pp,
-        )
-        .unwrap();
-    }
+    <span class="kw">let </span>pp = page_alloc().unwrap();
+    page_insert(
+        pgdir,
+        <span class="macro">PTE_ADDR!</span>(va),
+        asid,
+        <span class="kw">if </span>(UVPT..ULIM).contains(<span class="kw-2">&amp;</span>va) { <span class="number">0 </span>} <span class="kw">else </span>{ PTE_D },
+        pp,
+    )
+    .unwrap();
 }
 
 <span class="attr">#[no_mangle]
@@ -163,10 +168,10 @@
             <span class="prelude-val">None </span>=&gt; passive_alloc(va, cur_pgdir, asid),
             <span class="prelude-val">Some</span>((<span class="kw">_</span>, ppte)) =&gt; {
                 <span class="kw">let </span>ppte = (ppte <span class="kw">as </span>u32 &amp; !<span class="number">0x7</span>) <span class="kw">as </span><span class="kw-2">*mut </span>Pte;
-                <span class="kw">unsafe </span>{
-                    pentrylo[<span class="number">0</span>] = <span class="kw-2">*</span>ppte &gt;&gt; <span class="number">6</span>;
-                    pentrylo[<span class="number">1</span>] = <span class="kw-2">*</span>((ppte <span class="kw">as </span>usize + <span class="number">4</span>) <span class="kw">as </span><span class="kw-2">*mut </span>Pte) &gt;&gt; <span class="number">6</span>;
-                }
+
+                pentrylo[<span class="number">0</span>] = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>ppte } &gt;&gt; <span class="number">6</span>;
+                pentrylo[<span class="number">1</span>] = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>ppte.wrapping_add(<span class="number">1</span>) } &gt;&gt; <span class="number">6</span>;
+
                 <span class="kw">break</span>;
             }
         }
@@ -176,22 +181,29 @@
 <span class="doccomment">/// # Safety
 ///
 </span><span class="attr">#[no_mangle]
-</span><span class="kw">pub unsafe fn </span>do_tlb_mod(trapframe: <span class="kw-2">*mut </span>TrapFrame) {
-    <span class="kw">let </span>stored_trapframe = <span class="kw-2">*</span>trapframe;
-    <span class="kw">if </span>!(USTACKTOP..UXSTACKTOP).contains(<span class="kw-2">&amp;</span>((<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] <span class="kw">as </span>usize)) {
-        (<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] = UXSTACKTOP <span class="kw">as </span>u32;
+</span><span class="kw">pub fn </span>do_tlb_mod(trapframe: <span class="kw-2">*mut </span>TrapFrame) {
+    <span class="kw">let </span>tf = trapframe; <span class="comment">// deceits
+    </span><span class="kw">let </span>stored_trapframe = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>tf };
+    <span class="kw">let </span><span class="kw-2">mut </span>modified_trapframe = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>tf };
+    <span class="kw">if </span>!(USTACKTOP..UXSTACKTOP).contains(<span class="kw-2">&amp;</span>(modified_trapframe.regs[<span class="number">29</span>] <span class="kw">as </span>usize)) {
+        modified_trapframe.regs[<span class="number">29</span>] = UXSTACKTOP <span class="kw">as </span>u32;
     }
-    (<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] -= size_of::&lt;TrapFrame&gt;() <span class="kw">as </span>u32;
-    ((<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).write(stored_trapframe);
+    modified_trapframe.regs[<span class="number">29</span>] -= size_of::&lt;TrapFrame&gt;() <span class="kw">as </span>u32;
+    <span class="kw">let </span>target = modified_trapframe.regs[<span class="number">29</span>] <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame;
+    <span class="kw">unsafe </span>{ target.write(stored_trapframe) };
     <span class="comment">// Pte was ignored in the C-Edition Mos
-    </span><span class="kw">let _ </span>= page_lookup(<span class="kw-2">*</span>CUR_PGDIR.borrow(), (<span class="kw-2">*</span>trapframe).cp0_badvaddr <span class="kw">as </span>usize);
+    </span><span class="kw">let _ </span>= page_lookup(
+        <span class="kw-2">*</span>CUR_PGDIR.borrow(),
+        modified_trapframe.cp0_badvaddr <span class="kw">as </span>usize,
+    );
     <span class="kw">let </span>tlb_entry = ENVS_DATA.borrow().<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].user_tlb_mod_entry;
     <span class="kw">if </span>tlb_entry != <span class="number">0 </span>{
-        (<span class="kw-2">*</span>trapframe).regs[<span class="number">4</span>] = (<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>];
-        (<span class="kw-2">*</span>trapframe).regs[<span class="number">29</span>] -= size_of_val(<span class="kw-2">&amp;</span>(<span class="kw-2">*</span>trapframe).regs[<span class="number">4</span>]) <span class="kw">as </span>u32;
-        (<span class="kw-2">*</span>trapframe).cp0_epc = tlb_entry;
+        modified_trapframe.regs[<span class="number">4</span>] = modified_trapframe.regs[<span class="number">29</span>];
+        modified_trapframe.regs[<span class="number">29</span>] -= size_of_val(<span class="kw-2">&amp;</span>modified_trapframe.regs[<span class="number">4</span>]) <span class="kw">as </span>u32;
+        modified_trapframe.cp0_epc = tlb_entry;
     } <span class="kw">else </span>{
         <span class="macro">panic!</span>(<span class="string">"TLB Mod but no user handler registered"</span>)
     }
+    <span class="kw">unsafe </span>{ core::ptr::write_volatile(tf, modified_trapframe) }
 }
 </code></pre></div></section></main></body></html>

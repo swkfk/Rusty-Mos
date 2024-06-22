@@ -136,21 +136,19 @@
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::{
     alloc::GlobalAlloc,
     cmp::{max, min},
     ptr::null_mut,
 };
 
-<span class="kw">use </span>spin::Mutex;
-
 <span class="kw">use crate</span>::{
     debugln,
     kdef::mmu::PAGE_SIZE,
     memory::pmap::{PageList, PageNode, PAGES},
-    pa2page, page2kva, PADDR,
+    pa2page, page2kva,
+    utils::sync_ref_cell::SyncImplRef,
+    PADDR,
 };
 
 <span class="kw">struct </span>BuddyInner&lt;<span class="kw">const </span>CCOUNT: usize&gt; {
@@ -174,15 +172,13 @@
         }
     }
 
-    <span class="doccomment">/// # Safety
-    ///
-    </span><span class="kw">unsafe fn </span>init(<span class="kw-2">&amp;mut </span><span class="self">self</span>, page_start: <span class="kw-2">*mut </span>PageNode, size: usize) {
+    <span class="kw">fn </span>init(<span class="kw-2">&amp;mut </span><span class="self">self</span>, page_start: <span class="kw-2">*mut </span>PageNode, size: usize) {
         <span class="self">self</span>.page_start = page_start;
         <span class="kw">let </span>page_count = size / PAGE_SIZE;
         <span class="kw">let </span><span class="kw-2">mut </span>index = <span class="number">0</span>;
         <span class="kw">for </span>i <span class="kw">in </span>(<span class="number">0</span>..CCOUNT).rev() {
             <span class="kw">while </span>index &lt; page_count {
-                <span class="self">self</span>.free_list[i].insert_head(page_start.add(index));
+                <span class="kw">unsafe </span>{ <span class="self">self</span>.free_list[i].insert_head(page_start.add(index)) };
                 index += <span class="number">1 </span>&lt;&lt; i;
             }
         }
@@ -190,7 +186,7 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; BuddyInner&lt;CCOUNT&gt; {
-    <span class="kw">unsafe fn </span>alloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layout: core::alloc::Layout) -&gt; <span class="kw-2">*mut </span>u8 {
+    <span class="kw">fn </span>alloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layout: core::alloc::Layout) -&gt; <span class="kw-2">*mut </span>u8 {
         <span class="kw">let </span>page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
         <span class="kw">let </span>page_count = max(page_count, <span class="number">1</span>);
         <span class="kw">let </span>category = page_count.trailing_zeros() <span class="kw">as </span>usize;
@@ -209,7 +205,7 @@
             <span class="kw">let </span>allocated = <span class="self">self</span>.free_list[i].pop_head().unwrap();
             <span class="kw">let </span><span class="kw-2">mut </span>page = allocated <span class="kw">as </span><span class="kw-2">*mut </span>PageNode;
             <span class="kw">for </span>j <span class="kw">in </span>category..=i {
-                page = page.add(<span class="number">1 </span>&lt;&lt; j);
+                page = page.wrapping_add(<span class="number">1 </span>&lt;&lt; j);
                 <span class="self">self</span>.free_list[j].insert_head(page);
             }
             <span class="kw">let </span>kva = <span class="macro">page2kva!</span>(allocated, <span class="kw-2">*</span>PAGES.borrow(); PageNode);
@@ -224,9 +220,9 @@
         null_mut()
     }
 
-    <span class="kw">unsafe fn </span>dealloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, layout: core::alloc::Layout) {
+    <span class="kw">fn </span>dealloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, layout: core::alloc::Layout) {
         <span class="kw">let </span>p = <span class="macro">pa2page!</span>(<span class="macro">PADDR!</span>(ptr <span class="kw">as </span>usize), <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>PageNode;
-        <span class="kw">let </span><span class="kw-2">mut </span>page_index = p.offset_from(<span class="self">self</span>.page_start) <span class="kw">as </span>usize;
+        <span class="kw">let </span><span class="kw-2">mut </span>page_index = <span class="kw">unsafe </span>{ p.offset_from(<span class="self">self</span>.page_start) } <span class="kw">as </span>usize;
         <span class="kw">let </span>page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
         <span class="kw">let </span>page_count = max(page_count, <span class="number">1</span>);
         <span class="kw">let </span>category = page_count.trailing_zeros() <span class="kw">as </span>usize;
@@ -235,21 +231,21 @@
             <span class="kw">let </span>buddy = page_index ^ (<span class="number">1 </span>&lt;&lt; i);
             <span class="kw">let </span><span class="kw-2">mut </span>list = <span class="self">self</span>.free_list[i].head;
             <span class="kw">while </span>i != CCOUNT - <span class="number">1 </span>&amp;&amp; !list.is_null() {
-                <span class="kw">if </span>buddy == list.offset_from(<span class="self">self</span>.page_start) <span class="kw">as </span>usize {
-                    PageList::remove(<span class="self">self</span>.page_start.add(buddy));
+                <span class="kw">if </span>buddy == <span class="kw">unsafe </span>{ list.offset_from(<span class="self">self</span>.page_start) } <span class="kw">as </span>usize {
+                    <span class="kw">unsafe </span>{ PageList::remove(<span class="self">self</span>.page_start.add(buddy)) };
                     page_index = min(page_index, buddy);
                     <span class="kw">continue </span><span class="lifetime">'iter_cate</span>;
                 }
-                list = (<span class="kw-2">*</span>list).next;
+                <span class="kw">unsafe </span>{ list = (<span class="kw-2">*</span>list).next };
             }
             <span class="comment">// Not find or reach the end
-            </span><span class="self">self</span>.free_list[i].insert_head(<span class="self">self</span>.page_start.add(page_index));
+            </span><span class="kw">unsafe </span>{ <span class="self">self</span>.free_list[i].insert_head(<span class="self">self</span>.page_start.add(page_index)) };
             <span class="kw">break</span>;
         }
     }
 }
 
-<span class="kw">pub struct </span>BuddyAllocator&lt;<span class="kw">const </span>CCOUNT: usize&gt;(Mutex&lt;BuddyInner&lt;CCOUNT&gt;&gt;);
+<span class="kw">pub struct </span>BuddyAllocator&lt;<span class="kw">const </span>CCOUNT: usize&gt;(SyncImplRef&lt;BuddyInner&lt;CCOUNT&gt;&gt;);
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; Default <span class="kw">for </span>BuddyAllocator&lt;CCOUNT&gt; {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
@@ -259,23 +255,23 @@
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; BuddyAllocator&lt;CCOUNT&gt; {
     <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>(Mutex::new(BuddyInner::&lt;CCOUNT&gt;::new()))
+        <span class="self">Self</span>(SyncImplRef::new(BuddyInner::&lt;CCOUNT&gt;::new()))
     }
 
     <span class="doccomment">/// # Safety
     ///
     </span><span class="kw">pub unsafe fn </span>init(<span class="kw-2">&amp;</span><span class="self">self</span>, page_start: <span class="kw-2">*mut </span>PageNode, size: usize) {
-        <span class="self">self</span>.<span class="number">0</span>.lock().init(page_start, size)
+        <span class="self">self</span>.<span class="number">0</span>.borrow_mut().init(page_start, size)
     }
 }
 
 <span class="kw">unsafe impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; GlobalAlloc <span class="kw">for </span>BuddyAllocator&lt;CCOUNT&gt; {
     <span class="kw">unsafe fn </span>alloc(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: core::alloc::Layout) -&gt; <span class="kw-2">*mut </span>u8 {
-        <span class="self">self</span>.<span class="number">0</span>.lock().alloc(layout)
+        <span class="self">self</span>.<span class="number">0</span>.borrow_mut().alloc(layout)
     }
 
     <span class="kw">unsafe fn </span>dealloc(<span class="kw-2">&amp;</span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, layout: core::alloc::Layout) {
-        <span class="self">self</span>.<span class="number">0</span>.lock().dealloc(ptr, layout)
+        <span class="self">self</span>.<span class="number">0</span>.borrow_mut().dealloc(ptr, layout)
     }
 }
 </code></pre></div></section></main></body></html>
