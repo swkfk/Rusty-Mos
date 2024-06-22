@@ -1,3 +1,5 @@
+use crate::println;
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TrapFrame {
@@ -26,6 +28,7 @@ impl TrapFrame {
 
 extern "C" {
     pub fn handle_reserved(trap_frame: *const TrapFrame);
+    pub fn handle_skip(trap_frame: *const TrapFrame);
     pub fn handle_int(trap_frame: *const TrapFrame);
     pub fn handle_tlb(trap_frame: *const TrapFrame);
     pub fn handle_mod(trap_frame: *const TrapFrame);
@@ -35,18 +38,18 @@ extern "C" {
 #[export_name = "exception_handlers"]
 pub static EXCEPTION_HANDLERS: [unsafe extern "C" fn(*const TrapFrame); 32] = [
     /*  0 */ handle_int,
-    /*  1 */ handle_mod,
-    /*  2 */ handle_tlb,
-    /*  3 */ handle_tlb,
-    /*  4 */ handle_reserved,
-    /*  5 */ handle_reserved,
+    /*  1 */ handle_mod, // TLB Mod
+    /*  2 */ handle_tlb, // TLB L
+    /*  3 */ handle_tlb, // TLB S
+    /*  4 */ handle_skip, // AdEL
+    /*  5 */ handle_skip, // AdES
     /*  6 */ handle_reserved,
     /*  7 */ handle_reserved,
     /*  8 */ handle_sys,
     /*  9 */ handle_reserved,
-    /* 10 */ handle_reserved,
+    /* 10 */ handle_skip, // RI
     /* 11 */ handle_reserved,
-    /* 12 */ handle_reserved,
+    /* 12 */ handle_skip, // Ov
     /* 13 */ handle_reserved,
     /* 14 */ handle_reserved,
     /* 15 */ handle_reserved,
@@ -73,4 +76,15 @@ pub static EXCEPTION_HANDLERS: [unsafe extern "C" fn(*const TrapFrame); 32] = [
 #[no_mangle]
 pub unsafe fn do_reserved(trap_frame: *const TrapFrame) {
     panic!("Unknown ExcCode {:2}", (*trap_frame).cp0_cause >> 2 & 0x1f);
+}
+
+/// # Safety
+///
+#[no_mangle]
+pub unsafe fn do_skip(trap_frame: *mut TrapFrame) {
+    println!(
+        "\x1b[31mExcCode {:2} detected. Skipped!\x1b[0m",
+        (*trap_frame).cp0_cause >> 2 & 0x1f
+    );
+    (*trap_frame).cp0_epc += 4;
 }

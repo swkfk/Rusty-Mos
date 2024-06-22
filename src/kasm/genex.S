@@ -32,3 +32,4 @@ BUILD_HANDLER mod do_tlb_mod
 BUILD_HANDLER sys do_syscall
 
 BUILD_HANDLER reserved do_reserved
+BUILD_HANDLER skip do_skip
