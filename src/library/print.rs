@@ -1,4 +1,4 @@
-use crate::kern::machine::print_charc;
+use crate::arch_mipsel::machine::print_charc;
 
 use core::fmt::{self, Write};
 
@@ -24,7 +24,7 @@ pub fn _write_str(s: &str) {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => {{
-        $crate::klib::print::_print(format_args!($($arg)*));
+        $crate::library::print::_print(format_args!($($arg)*));
     }};
 }
 

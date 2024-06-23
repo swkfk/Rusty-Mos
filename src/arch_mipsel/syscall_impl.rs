@@ -5,24 +5,25 @@ use core::{
 };
 
 use crate::{
+    consts::error::KError,
     debugln,
-    kdef::{
-        env::EnvStatus,
-        error::KError,
-        mmu::{KSTACKTOP, PTE_V, UTEMP, UTOP},
-        syscall::MAX_SYS_NO,
+    memory::{
+        pmap::{page_alloc, page_insert, page_lookup, page_remove},
+        regions::{KSTACKTOP, PTE_V, UTEMP, UTOP},
     },
-    kern::env::env_destory,
-    memory::pmap::{page_alloc, page_insert, page_lookup, page_remove},
+    process::envs::{
+        env_alloc, env_destory, envid2env, EnvStatus, CUR_ENV_IDX, ENVS_DATA, ENV_SCHE_LIST,
+    },
+    utils::io::{ioread_into_va, iowrite_from_va},
 };
 
 use super::{
-    env::{env_alloc, envid2env, CUR_ENV_IDX, ENVS_DATA, ENV_SCHE_LIST},
-    io::{ioread_into_va, iowrite_from_va},
     machine::{print_charc, scan_charc},
-    sched::schedule,
+    syscall::MAX_SYS_NO,
     trap::TrapFrame,
 };
+
+use crate::process::scheduler::schedule;
 
 // type PureResult = Result<(), KError>;
 

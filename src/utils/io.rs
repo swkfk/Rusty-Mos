@@ -1,6 +1,6 @@
 use core::ptr;
 
-use crate::kdef::mmu::KSEG1;
+use crate::memory::regions::KSEG1;
 
 pub fn iowrite_from_va<T>(dst_paddr: usize, src_addr: usize) {
     unsafe {

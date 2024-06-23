@@ -5,19 +5,20 @@
 use core::{arch::global_asm, include_str, panic::PanicInfo};
 
 use rusty_mos::{
+    arch_mipsel::machine::halt,
     debugln,
-    kern::{env::env_init, machine::halt, sched::schedule},
     memory::pmap::{mips_detect_memory, mips_vm_init, page_init},
     println,
+    process::{envs::env_init, scheduler::schedule},
 };
 
-global_asm!(include_str!("kasm/include/inc.S"));
-global_asm!(include_str!("kasm/tlb.S"));
+global_asm!(include_str!("arch_mipsel/asm/include/inc.S"));
+global_asm!(include_str!("arch_mipsel/asm/tlb.S"));
 global_asm!(include_str!("start.S"));
-global_asm!(include_str!("kasm/entry.S"));
-global_asm!(include_str!("kasm/genex.S"));
-global_asm!(include_str!("kasm/kclock.S"));
-global_asm!(include_str!("kasm/env.S"));
+global_asm!(include_str!("arch_mipsel/asm/entry.S"));
+global_asm!(include_str!("arch_mipsel/asm/genex.S"));
+global_asm!(include_str!("arch_mipsel/asm/kclock.S"));
+global_asm!(include_str!("arch_mipsel/asm/env.S"));
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -29,7 +30,7 @@ fn panic(info: &PanicInfo) -> ! {
 #[cfg(mos_build)]
 use core::ptr::addr_of;
 #[cfg(mos_build)]
-use rusty_mos::kern::env::env_create;
+use rusty_mos::process::envs::env_create;
 
 #[cfg(mos_build)]
 macro_rules! ENV_CREATE {

@@ -1,8 +1,10 @@
-//! Define the Elf32 struct and the basic contants for use.
+use core::{cmp::min, mem::size_of, ptr::null};
 
-use core::{mem::size_of, ptr::null};
-
-use super::error::KError;
+use crate::{
+    consts::error::KError,
+    memory::regions::{PAGE_SIZE, PTE_D, PTE_V},
+    ROUNDDOWN,
+};
 
 /// Half a word (16 bits).
 type Elf32Half = u16;
@@ -120,3 +122,76 @@ pub const PF_R: u32 = 1 << 2;
 
 /// Mark the segment as loadble and load-needed.
 pub const PT_LOAD: u32 = 1;
+
+/// Load an elf-format binary file in memory. This method will map all sections
+/// to correct virtual address.
+///
+/// An KError will be transmitted if the `map_segment` failed.
+///
+/// # Safety
+/// The raw ptr **SHALL** be readable in all loadable sections and the phdr
+/// **SHALL** be valid.
+pub fn elf_load_seg(
+    ph: *const Elf32Phdr,
+    bin: *const u8,
+    map_page: ElfMapperFn,
+    data: usize,
+) -> Result<(), KError> {
+    let ph_ = ph; // deceits
+    let phdr = unsafe { *ph_ };
+    let va = phdr.vaddr;
+    let bin_size = phdr.filesz;
+    let seg_size = phdr.memsz;
+
+    // Load the perm. Place the dirty bit acording the section attribute.
+    let mut perm = PTE_V;
+    if phdr.flags & PF_W > 0 {
+        perm |= PTE_D;
+    }
+
+    // Map the unaligned data at head.
+    let offset = va - ROUNDDOWN!(va; PAGE_SIZE as u32);
+    if offset != 0 {
+        map_page(
+            data,
+            va as usize,
+            offset as isize,
+            perm,
+            bin,
+            min(bin_size, PAGE_SIZE as u32 - offset) as usize,
+        )?;
+    }
+
+    let mut i = if offset != 0 {
+        min(bin_size, PAGE_SIZE as u32 - offset) as usize
+    } else {
+        0
+    };
+
+    while i < bin_size as usize {
+        map_page(
+            data,
+            va as usize + i,
+            0,
+            perm,
+            bin.wrapping_add(i),
+            min(bin_size as usize - i, PAGE_SIZE),
+        )?;
+        i += PAGE_SIZE;
+    }
+
+    // `bin_size` < `sgsize`
+    while i < seg_size as usize {
+        map_page(
+            data,
+            va as usize + i,
+            0,
+            perm,
+            null(),
+            min(seg_size as usize - i, PAGE_SIZE),
+        )?;
+        i += PAGE_SIZE;
+    }
+
+    Ok(())
+}

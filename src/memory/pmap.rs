@@ -3,11 +3,9 @@ use core::{mem::size_of, ptr};
 use crate::utils::linked_list::{LinkList, LinkNode};
 use crate::utils::sync_ref_cell::SyncImplRef;
 use crate::{
+    consts::error::KError,
     debugln,
-    kdef::{
-        error::KError,
-        mmu::{PGSHIFT, PTE_C_CACHEABLE, PTE_V},
-    },
+    memory::regions::{PGSHIFT, PTE_C_CACHEABLE, PTE_V},
     pa2page, page2kva, page2pa, println, ARRAY_PTR, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
 

@@ -14,7 +14,7 @@ macro_rules! page2ppn {
 #[macro_export]
 macro_rules! page2pa {
     ($pp:expr, $pages:expr; $t:ty) => {{
-        $crate::page2ppn!($pp, $pages; $t) << $crate::kdef::mmu::PGSHIFT
+        $crate::page2ppn!($pp, $pages; $t) << $crate::memory::regions::PGSHIFT
     }};
 }
 
@@ -49,11 +49,11 @@ macro_rules! pa2page {
 macro_rules! va2pa {
     ($pgdir:expr, $va:expr) => {{
         let pgdir = $crate::ARRAY_PTR!($pgdir; $crate::PDX!($va), $crate::kern::pmap::Pde);
-        if 0 == (*pgdir & $crate::kdef::mmu::PTE_V) {
+        if 0 == (*pgdir & $crate::memory::regions::PTE_V) {
             !0
         } else {
             let p = $crate::KADDR!($crate::PTE_ADDR!(*pgdir)) as *mut $crate::kern::pmap::Pte;
-            if 0 == (*$crate::ARRAY_PTR!(p; $crate::PTX!($va), $crate::kern::pmap::Pte) & $crate::kdef::mmu::PTE_V) {
+            if 0 == (*$crate::ARRAY_PTR!(p; $crate::PTX!($va), $crate::kern::pmap::Pte) & $crate::memory::regions::PTE_V) {
                 !0
             } else {
                 $crate::PTE_ADDR!(*$crate::ARRAY_PTR!(p; $crate::PTX!($va), $crate::kern::pmap::Pte) as u32) as usize
@@ -107,7 +107,7 @@ macro_rules! PTE_ADDR {
 #[macro_export]
 macro_rules! PDX {
     ($va: expr) => {{
-        ($va >> $crate::kdef::mmu::PDSHIFT) & 0x03FF
+        ($va >> $crate::memory::regions::PDSHIFT) & 0x03FF
     }};
 }
 
@@ -117,7 +117,7 @@ macro_rules! PDX {
 #[macro_export]
 macro_rules! PTX {
     ($va: expr) => {{
-        ($va >> $crate::kdef::mmu::PGSHIFT) & 0x03FF
+        ($va >> $crate::memory::regions::PGSHIFT) & 0x03FF
     }};
 }
 
@@ -125,6 +125,6 @@ macro_rules! PTX {
 #[macro_export]
 macro_rules! PPN {
     ($pa: expr) => {
-        $pa >> $crate::kdef::mmu::PGSHIFT
+        $pa >> $crate::memory::regions::PGSHIFT
     };
 }

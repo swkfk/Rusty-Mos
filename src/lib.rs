@@ -2,10 +2,11 @@
 #![no_std]
 #![no_main]
 
-pub mod kdef;
-pub mod kern;
-pub mod klib;
+pub mod arch_mipsel;
+pub mod consts;
+pub mod library;
 pub mod memory;
+pub mod process;
 pub mod utils;
 
 use memory::buddy_allocator::BuddyAllocator;

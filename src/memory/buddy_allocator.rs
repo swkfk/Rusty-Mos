@@ -6,8 +6,8 @@ use core::{
 
 use crate::{
     debugln,
-    kdef::mmu::PAGE_SIZE,
     memory::pmap::{PageList, PageNode, PAGES},
+    memory::regions::PAGE_SIZE,
     pa2page, page2kva,
     utils::sync_ref_cell::SyncImplRef,
     PADDR,

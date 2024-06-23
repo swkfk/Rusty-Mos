@@ -1,8 +1,8 @@
 use crate::{
-    kdef::mmu::{
+    memory::regions::{
         NASID, PAGE_SIZE, PGSHIFT, PTE_D, UENVS, ULIM, UPAGES, USTACKTOP, UTEMP, UVPT, UXSTACKTOP,
     },
-    kern::env::ENVS_DATA,
+    process::envs::{CUR_ENV_IDX, ENVS_DATA},
     GEN_MASK, PTE_ADDR,
 };
 use core::mem::{size_of, size_of_val};
@@ -10,7 +10,7 @@ use core::sync::atomic::Ordering::SeqCst;
 
 use crate::memory::pmap::{page_alloc, page_insert, page_lookup, Pde, Pte, CUR_PGDIR};
 
-use crate::kern::{env::CUR_ENV_IDX, trap::TrapFrame};
+use crate::arch_mipsel::trap::TrapFrame;
 
 extern "C" {
     pub fn tlb_out(entryhi: u32);

@@ -1,7 +1,6 @@
 //! Do the schedule job.
 
-use super::env::{env_run, CUR_ENV_IDX, ENVS_DATA, ENV_SCHE_LIST};
-use crate::kdef::env::{EnvStatus, NENV};
+use crate::process::envs::{env_run, EnvStatus, CUR_ENV_IDX, ENVS_DATA, ENV_SCHE_LIST, NENV};
 use core::sync::atomic::{AtomicU32, Ordering::SeqCst};
 
 /// Record the env's rest time-slice for scheduling.
