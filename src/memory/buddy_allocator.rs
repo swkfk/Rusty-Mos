@@ -73,9 +73,10 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
             }
             let kva = page2kva!(allocated, *PAGES.borrow(); PageNode);
             debugln!(
-                "> ALLOC: allocated: page at 0x{:x}, kva at 0x{:x}",
+                "> ALLOC: allocated: page at 0x{:x}, kva at 0x{:x}, index: {}",
                 allocated as usize,
-                kva
+                kva,
+                (allocated as usize - self.page_start as usize) / mem::size_of::<PageNode>()
             );
             return kva as *mut u8;
         }
@@ -89,6 +90,13 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
         let page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
         let page_count = max(page_count, 1);
         let category = page_count.trailing_zeros() as usize;
+        debugln!(
+            "> FREE: dealloc {} bytes with align {}, at 0x{:x}, index: {}",
+            layout.size(),
+            layout.align(),
+            ptr as usize,
+            page_index
+        );
 
         'iter_cate: for i in category..CCOUNT {
             let buddy = page_index ^ (1 << i);
@@ -97,12 +105,14 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
                 if buddy == (list as usize - self.page_start as usize) / mem::size_of::<PageNode>()
                 {
                     PageList::remove(self.page_start.wrapping_add(buddy));
+                    debugln!("> FREE: remove page {}", buddy);
                     page_index = min(page_index, buddy);
                     continue 'iter_cate;
                 }
                 unsafe { list = (*list).next };
             }
             // Not find or reach the end
+            debugln!("> FREE: insert page {} into category {}", page_index, i);
             self.free_list[i].insert_head(self.page_start.wrapping_add(page_index));
             break;
         }
