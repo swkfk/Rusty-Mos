@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["PF_R","PF_W","PF_X","PT_LOAD"],"fn":["elf_load_seg"],"struct":["Elf32Ehdr","Elf32Phdr"],"type":["ElfMapperFn"]};
