@@ -46,6 +46,6 @@ clean:
 	MOS_USER=1 $(MAKE) --directory=mos_user clean
 
 doc:
-	$(CARGO) doc $(CARGO_TARGET) $(CARGO_ZBUILD)
-	rm -r ./doc/
+	$(CARGO) doc $(CARGO_TARGET) $(CARGO_ZBUILD) --document-private-items
+	-rm -r ./doc/
 	mv $(target_path)/doc/ .
