@@ -1,6 +1,7 @@
 use core::{
     alloc::GlobalAlloc,
     cmp::{max, min},
+    mem,
     ptr::null_mut,
 };
 
@@ -40,7 +41,7 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
         let mut index = 0;
         for i in (0..CCOUNT).rev() {
             while index < page_count {
-                unsafe { self.free_list[i].insert_head(page_start.add(index)) };
+                self.free_list[i].insert_head(page_start.wrapping_add(index));
                 index += 1 << i;
             }
         }
@@ -83,8 +84,8 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
     }
 
     fn dealloc(&mut self, ptr: *mut u8, layout: core::alloc::Layout) {
-        let p = pa2page!(PADDR!(ptr as usize), *PAGES.borrow(); PageNode) as *mut PageNode;
-        let mut page_index = unsafe { p.offset_from(self.page_start) } as usize;
+        let p = pa2page!(PADDR!(ptr as usize), *PAGES.borrow(); PageNode);
+        let mut page_index = (p - self.page_start as usize) / mem::size_of::<PageNode>();
         let page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
         let page_count = max(page_count, 1);
         let category = page_count.trailing_zeros() as usize;
@@ -93,15 +94,16 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
             let buddy = page_index ^ (1 << i);
             let mut list = self.free_list[i].head;
             while i != CCOUNT - 1 && !list.is_null() {
-                if buddy == unsafe { list.offset_from(self.page_start) } as usize {
-                    unsafe { PageList::remove(self.page_start.add(buddy)) };
+                if buddy == (list as usize - self.page_start as usize) / mem::size_of::<PageNode>()
+                {
+                    PageList::remove(self.page_start.wrapping_add(buddy));
                     page_index = min(page_index, buddy);
                     continue 'iter_cate;
                 }
                 unsafe { list = (*list).next };
             }
             // Not find or reach the end
-            unsafe { self.free_list[i].insert_head(self.page_start.add(page_index)) };
+            self.free_list[i].insert_head(self.page_start.wrapping_add(page_index));
             break;
         }
     }
@@ -120,9 +122,7 @@ impl<const CCOUNT: usize> BuddyAllocator<CCOUNT> {
         Self(SyncImplRef::new(BuddyInner::<CCOUNT>::new()))
     }
 
-    /// # Safety
-    ///
-    pub unsafe fn init(&self, page_start: *mut PageNode, size: usize) {
+    pub fn init(&self, page_start: *mut PageNode, size: usize) {
         self.0.borrow_mut().init(page_start, size)
     }
 }

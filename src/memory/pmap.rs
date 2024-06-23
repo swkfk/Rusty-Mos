@@ -81,7 +81,7 @@ pub fn mips_vm_init(freemem: &mut usize, memsize: usize) {
     *KERN_HEAP.borrow_mut() = alloc(freemem, memsize, 512 * PAGE_SIZE, PAGE_SIZE, true);
     let page_start =
         pa2page!(PADDR!(*KERN_HEAP.borrow() as usize), *PAGES.borrow(); PageNode) as *mut PageNode;
-    unsafe { crate::BUDDY_ALLOCATOR.init(page_start, 512 * PAGE_SIZE) }
+    crate::BUDDY_ALLOCATOR.init(page_start, 512 * PAGE_SIZE);
 
     println!("Heaps are to the memeory 0x{:x}", freemem);
     debugln!("> pmap.rs: mips vm init success");
