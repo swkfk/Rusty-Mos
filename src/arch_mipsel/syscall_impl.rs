@@ -547,6 +547,26 @@ fn sys_read_dev(va: u32, pa: u32, len: u32) -> u32 {
     0
 }
 
+/// SYSNO: 18, create a shared memory pool.
+///
+/// The `va` *shall* be aligned to a [PAGE_SIZE] and the whole memory needed
+/// *shall* be in range \[[UTEMP, UTOP]).
+///
+/// Pages will be *allocated* in this syscall and mapped to the target virtual
+/// address one-by-one.
+///
+/// If any page was mapped to the address, it will be unmapped via
+/// [page_insert].
+///
+/// The env will be [bind](crate::memory::shared_pool::MemoryPool::bind) to the
+/// pool and a record will be set in the Pool Manager.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError::Invalid] if the `va` is out of
+/// the \[[UTEMP, UTOP]) range, or is not aligned.
+///
+/// This syscall will return a negated-[KError] returned by [page_insert].
 fn sys_create_shared_pool(va: u32, len: u32, perm: u32) -> u32 {
     let va = va as usize;
     let len = len as usize;
@@ -596,6 +616,18 @@ fn sys_create_shared_pool(va: u32, len: u32, perm: u32) -> u32 {
     pool_id as u32
 }
 
+/// SYSNO: 19, bind a existed memory pool.
+///
+/// The `va` *shall* be aligned to a [PAGE_SIZE] and the whole memory needed
+/// *shall* be in range \[[UTEMP, UTOP]).
+///
+/// The `id` of the pool *shall* exist and one env *cannot* bind to the same
+/// pool altough the `va` is different.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError] returned by [page_insert] and
+/// [bind](crate::memory::shared_pool::MemoryPool::bind).
 fn sys_bind_shared_pool(va: u32, id: u32, perm: u32) -> u32 {
     let va = va as usize;
     match MEMORY_POOL.borrow_mut().bind(
@@ -621,6 +653,23 @@ fn sys_bind_shared_pool(va: u32, id: u32, perm: u32) -> u32 {
     }
 }
 
+/// SYSNO: 20, lock a specified memory pool.
+///
+/// Only the env which has been bind to the pool can lock it.
+///
+/// # Return
+///
+/// `Ok(bool)` means everything goes smooth.
+///
+/// - `Ok(true)` or `Ok(1)` means this pool is successfully locked.
+/// - `Ok(false)` or `Ok(0)` means this pool *has been* locked.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError] if the pool does not exist or
+/// the current env cannot lock it.
+///
+/// See Also: [MemoryPool::lock](crate::memory::shared_pool::MemoryPool::lock)
 fn sys_lock(id: u32) -> u32 {
     match MEMORY_POOL.borrow_mut().lock(
         id as usize,
@@ -631,6 +680,16 @@ fn sys_lock(id: u32) -> u32 {
     }
 }
 
+/// SYSNO: 21, unlock a memory pool.
+///
+/// Only the env which locked pool can unlock it.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError] if the pool was not locked or
+/// locked by another env.
+///
+/// See Also: [MemoryPool::unlock](crate::memory::shared_pool::MemoryPool::unlock)
 fn sys_unlock(id: u32) -> u32 {
     match MEMORY_POOL.borrow_mut().unlock(
         id as usize,

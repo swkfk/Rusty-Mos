@@ -8,6 +8,10 @@ use crate::{
 
 use super::machine::halt;
 
+/// Oops! The kernel panics >ω<
+///
+/// Handles kernel panic situations by printing diagnostic information
+/// and halting the system.
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("\x1b[31mKernel Panic!");
