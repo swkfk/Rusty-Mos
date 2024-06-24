@@ -1,18 +1,29 @@
+//! Handle exceptions(traps) and handler definitions.
+
 use crate::println;
 
+/// Things need to be stored in the trapframe.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TrapFrame {
+    /// All the regular registers.
     pub regs: [u32; 32],
+    /// The Status register in CP0.
     pub cp0_status: u32,
+    /// The HI register.
     pub hi: u32,
+    /// The LO register.
     pub lo: u32,
+    /// The BadAddr register in CP0.
     pub cp0_badvaddr: u32,
+    /// The Cause register in CP0.
     pub cp0_cause: u32,
+    /// The EPC register in CP0.
     pub cp0_epc: u32,
 }
 
 impl TrapFrame {
+    /// The default value of the registers.
     pub const fn const_construct() -> Self {
         Self {
             regs: [0; 32],
@@ -27,14 +38,21 @@ impl TrapFrame {
 }
 
 extern "C" {
+    /// Handle unknown exception code. Invoke a kernel panic.
     pub fn handle_reserved(trap_frame: *const TrapFrame);
+    /// Skip the current instruction.
     pub fn handle_skip(trap_frame: *const TrapFrame);
+    /// Handle the clock-interrupt.
     pub fn handle_int(trap_frame: *const TrapFrame);
+    /// Handle the TLBL or TLBS exception.
     pub fn handle_tlb(trap_frame: *const TrapFrame);
+    /// Handle the TLB Mod exception.
     pub fn handle_mod(trap_frame: *const TrapFrame);
+    /// Handle the syscall.
     pub fn handle_sys(trap_frame: *const TrapFrame);
 }
 
+/// Exception handlers table. This will be exported as `exception_handlers`.
 #[export_name = "exception_handlers"]
 pub static EXCEPTION_HANDLERS: [unsafe extern "C" fn(*const TrapFrame); 32] = [
     /*  0 */ handle_int,
@@ -71,15 +89,21 @@ pub static EXCEPTION_HANDLERS: [unsafe extern "C" fn(*const TrapFrame); 32] = [
     /* 31 */ handle_reserved,
 ];
 
+/// Invoke a panic.
+///
 /// # Safety
 ///
+/// The `trap_frame` *shall* be a valid address.
 #[no_mangle]
 pub unsafe fn do_reserved(trap_frame: *const TrapFrame) {
     panic!("Unknown ExcCode {:2}", (*trap_frame).cp0_cause >> 2 & 0x1f);
 }
 
+/// Skip the current instruction.
+///
 /// # Safety
 ///
+/// The `trap_frame` *shall* be a valid address.
 #[no_mangle]
 pub unsafe fn do_skip(trap_frame: *mut TrapFrame) {
     println!(
