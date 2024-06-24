@@ -2,7 +2,7 @@
 
 use core::{
     fmt::{Display, Write},
-    mem::size_of,
+    mem::{self, size_of},
     sync::atomic::Ordering::SeqCst,
 };
 
@@ -10,8 +10,9 @@ use crate::{
     consts::error::KError,
     debugln,
     memory::{
-        pmap::{page_alloc, page_insert, page_lookup, page_remove},
-        regions::{KSTACKTOP, PTE_V, UTEMP, UTOP},
+        pmap::{page_alloc, page_insert, page_lookup, page_remove, PageNode, PAGES},
+        regions::{KSTACKTOP, PAGE_SIZE, PTE_V, UTEMP, UTOP},
+        shared_pool::MEMORY_POOL,
     },
     process::envs::{
         env_alloc, env_destory, envid2env, EnvStatus, CUR_ENV_IDX, ENVS_DATA, ENV_SCHE_LIST,
@@ -541,6 +542,80 @@ fn sys_read_dev(va: u32, pa: u32, len: u32) -> u32 {
     0
 }
 
+fn sys_create_shared_pool(va: u32, len: u32, perm: u32) -> u32 {
+    let va = va as usize;
+    let len = len as usize;
+    if va.checked_add(len).is_none() || va < UTEMP || va + len > UTOP {
+        return KError::Invalid.into();
+    }
+    if va & (PAGE_SIZE - 1) != 0 {
+        return KError::Invalid.into();
+    }
+    let page_count = len.div_ceil(PAGE_SIZE);
+    let pool_id = MEMORY_POOL
+        .borrow_mut()
+        .crate_pool(ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].id as usize);
+
+    for i in 0..page_count {
+        let pp = page_alloc();
+        if let Err(e) = pp {
+            return e.into();
+        }
+        let pp = pp.unwrap();
+
+        if let Err(r) = MEMORY_POOL.borrow_mut().insert_page(
+            pool_id,
+            pp as usize - *PAGES.borrow() as usize / mem::size_of::<PageNode>(),
+        ) {
+            return r.into();
+        }
+
+        if let Err(r) = page_insert(
+            ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].pgdir,
+            va + i * PAGE_SIZE,
+            ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].asid,
+            perm,
+            pp,
+        ) {
+            return r.into();
+        }
+    }
+
+    if let Err(r) = MEMORY_POOL
+        .borrow_mut()
+        .bind(pool_id, CUR_ENV_IDX.load(SeqCst))
+    {
+        return r.into();
+    }
+
+    pool_id as u32
+}
+
+fn sys_bind_shared_pool(va: u32, id: u32, perm: u32) -> u32 {
+    let va = va as usize;
+    match MEMORY_POOL.borrow_mut().bind(
+        id as usize,
+        ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].id as usize,
+    ) {
+        Err(e) => e.into(),
+        Ok(pages) => {
+            for (i, page) in pages.iter().enumerate() {
+                let pp = PAGES.borrow().wrapping_add(*page);
+                if let Err(r) = page_insert(
+                    ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].pgdir,
+                    va + i * PAGE_SIZE,
+                    ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].asid,
+                    perm,
+                    pp,
+                ) {
+                    return r.into();
+                }
+            }
+            0
+        }
+    }
+}
+
 /// Just a type used in the [SYSCALL_TABLE]. A *holder*.
 type SyscallRawPtr = *const ();
 /// The real syscall function type.
@@ -571,6 +646,8 @@ pub const SYSCALL_TABLE: [SyscallRawPtr; MAX_SYS_NO] = [
     sys_cgetc as SyscallRawPtr,
     sys_write_dev as SyscallRawPtr,
     sys_read_dev as SyscallRawPtr,
+    sys_create_shared_pool as SyscallRawPtr,
+    sys_bind_shared_pool as SyscallRawPtr,
 ];
 
 /// Get the syscall number and all the five arguments. Invoke the syscall.
