@@ -4,9 +4,11 @@ use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::SeqCst;
 
 use alloc::collections::BTreeMap;
+use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::consts::error::KError;
+use crate::debugln;
 use crate::process::envs::{LOG2NENV, NENV};
 use crate::utils::sync_ref_cell::SyncImplRef;
 
@@ -33,11 +35,12 @@ impl MemoryPoolEntry {
         }
     }
 
-    pub fn deref(&mut self, envid: usize) -> Result<bool, KError> {
+    fn deref(&mut self, envid: usize) -> Result<bool, KError> {
         if !self.envs.contains(&envid) {
             Err(KError::PoolNotBind)
         } else {
             self.reference -= 1;
+            let _ = self.write_lock.compare_exchange(envid, 0, SeqCst, SeqCst);
             Ok(self.reference == 0)
         }
     }
@@ -61,6 +64,7 @@ impl MemoryPoolEntry {
 
 pub struct MemoryPool {
     pools: BTreeMap<usize, MemoryPoolEntry>,
+    envs: BTreeMap<usize, Vec<usize>>,
 }
 
 impl Default for MemoryPool {
@@ -73,6 +77,7 @@ impl MemoryPool {
     pub const fn new() -> Self {
         Self {
             pools: BTreeMap::new(),
+            envs: BTreeMap::new(),
         }
     }
 
@@ -92,6 +97,20 @@ impl MemoryPool {
         }
     }
 
+    pub fn fork_bind(&mut self, child_id: usize, envid: usize) {
+        debugln!("> POOL: forked pools from {} to {}...", envid, child_id);
+        match self.envs.get_mut(&envid) {
+            None => (),
+            Some(v) => {
+                let v = v.clone();
+                for pool in v.iter() {
+                    self.pools.get_mut(pool).unwrap().reference += 1;
+                }
+                self.envs.insert(child_id, v);
+            }
+        }
+    }
+
     pub fn bind(&mut self, poolid: usize, envid: usize) -> Result<&Vec<usize>, KError> {
         match self.pools.get_mut(&poolid) {
             None => Err(KError::PoolNotFound),
@@ -100,20 +119,42 @@ impl MemoryPool {
                     Err(KError::PoolDoubleBind)
                 } else {
                     pool.envs.push(envid);
+                    pool.reference += 1;
+                    match self.envs.get_mut(&envid) {
+                        None => {
+                            debugln!("> POOL: new env {}...", envid);
+                            let _ = self.envs.insert(envid, vec![poolid]);
+                        }
+                        Some(v) => v.push(poolid),
+                    }
                     Ok(&pool.pages)
                 }
             }
         }
     }
 
-    pub fn unbind(&mut self, poolid: usize, envid: usize) -> Result<(), KError> {
+    fn unbind(&mut self, poolid: usize, envid: usize) -> Result<(), KError> {
         match self.pools.get_mut(&poolid) {
             None => Err(KError::PoolNotFound),
             Some(pool) => {
                 if pool.deref(envid)? {
+                    debugln!("> POOL: pool {} removed", poolid);
                     self.pools.remove(&poolid);
                 }
                 Ok(())
+            }
+        }
+    }
+
+    pub fn destory_env(&mut self, envid: usize) {
+        match self.envs.get_mut(&envid) {
+            None => (),
+            Some(_) => {
+                let v = self.envs.remove(&envid).unwrap();
+                for poolid in v {
+                    debugln!("> POOL: unbind {} from env {}", poolid, envid);
+                    let _ = self.unbind(poolid, envid);
+                }
             }
         }
     }

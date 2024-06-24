@@ -258,6 +258,11 @@ fn sys_exofork() -> u32 {
     let e = e.unwrap();
 
     let mut env_data = ENVS_DATA.borrow_mut();
+
+    MEMORY_POOL
+        .borrow_mut()
+        .fork_bind(env_data.0[e].id as usize, env_data.0[e].parent_id as usize);
+
     env_data.0[e].trap_frame = unsafe { *((KSTACKTOP as *mut TrapFrame).sub(1)) };
     env_data.0[e].trap_frame.regs[2] = 0;
     env_data.0[e].status = EnvStatus::NotRunnable;
@@ -581,10 +586,10 @@ fn sys_create_shared_pool(va: u32, len: u32, perm: u32) -> u32 {
         }
     }
 
-    if let Err(r) = MEMORY_POOL
-        .borrow_mut()
-        .bind(pool_id, CUR_ENV_IDX.load(SeqCst))
-    {
+    if let Err(r) = MEMORY_POOL.borrow_mut().bind(
+        pool_id,
+        ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].id as usize,
+    ) {
         return r.into();
     }
 

@@ -19,11 +19,14 @@ use crate::{
             KSTACKTOP, NASID, PAGE_SIZE, PDSHIFT, PGSHIFT, PTE_G, PTE_V, UENVS, UPAGES, USTACKTOP,
             UTOP, UVPT,
         },
+        shared_pool::MEMORY_POOL,
         tlbex::tlb_invalidate,
     },
     pa2page, page2kva, println,
-    process::elf_loader::{elf_load_seg, Elf32Ehdr, Elf32Phdr, PT_LOAD},
-    process::scheduler::schedule,
+    process::{
+        elf_loader::{elf_load_seg, Elf32Ehdr, Elf32Phdr, PT_LOAD},
+        scheduler::schedule,
+    },
     utils::{
         array_based_list::{Aligned, ArrayLinkedList},
         sync_ref_cell::SyncImplRef as SyncRef,
@@ -379,6 +382,10 @@ pub fn env_free(env_index: usize) {
         ENV_SCHE_LIST.borrow_mut().remove(env_index);
     }
     ENV_FREE_LIST.borrow_mut().insert_head(env_index);
+
+    MEMORY_POOL
+        .borrow_mut()
+        .destory_env(ENVS_DATA.borrow().0[env_index].id as usize);
 }
 
 /// Destory an env and free it. Re-schedule will be performed.
