@@ -20,6 +20,12 @@ pub enum KError {
     NoFreeEnv,
     /// Attempt to send to env that is not recving
     IpcNotRecv,
+    /// Invalid memory pool id
+    PoolNotFound = 14,
+    /// An env try to bind to a pool twice
+    PoolDoubleBind,
+    /// The env is not binded to the pool
+    PoolNotBind,
 }
 
 impl From<KError> for u32 {
