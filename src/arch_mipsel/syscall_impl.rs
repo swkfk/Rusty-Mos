@@ -565,7 +565,7 @@ fn sys_create_shared_pool(va: u32, len: u32, perm: u32) -> u32 {
 
         if let Err(r) = MEMORY_POOL.borrow_mut().insert_page(
             pool_id,
-            pp as usize - *PAGES.borrow() as usize / mem::size_of::<PageNode>(),
+            (pp as usize - *PAGES.borrow() as usize) / mem::size_of::<PageNode>(),
         ) {
             return r.into();
         }
