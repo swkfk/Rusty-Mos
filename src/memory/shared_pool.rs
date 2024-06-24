@@ -1,7 +1,7 @@
 extern crate alloc;
 
+use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::Ordering::SeqCst;
-use core::sync::atomic::{AtomicBool, AtomicUsize};
 
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
@@ -14,7 +14,7 @@ struct MemoryPoolEntry {
     pages: Vec<usize>,
     envs: Vec<usize>,
     reference: usize,
-    write_lock: AtomicBool,
+    write_lock: AtomicUsize,
 }
 
 impl Default for MemoryPoolEntry {
@@ -29,7 +29,7 @@ impl MemoryPoolEntry {
             reference: 0,
             pages: Vec::new(),
             envs: Vec::new(),
-            write_lock: AtomicBool::new(false),
+            write_lock: AtomicUsize::new(0),
         }
     }
 
@@ -42,8 +42,20 @@ impl MemoryPoolEntry {
         }
     }
 
-    pub fn try_lock(&mut self) -> bool {
-        self.write_lock.swap(true, SeqCst)
+    pub fn try_lock(&mut self, envid: usize) -> bool {
+        self.write_lock.compare_exchange(0, envid, SeqCst, SeqCst) == Ok(0)
+    }
+
+    pub fn unlock(&mut self, envid: usize) -> Result<(), KError> {
+        let ret = self.write_lock.compare_exchange(envid, 0, SeqCst, SeqCst);
+        if let Err(r) = ret {
+            if r == 0 {
+                return Err(KError::NoLock);
+            } else {
+                return Err(KError::LockByOthers);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -106,10 +118,17 @@ impl MemoryPool {
         }
     }
 
-    pub fn try_lock(&mut self, poolid: usize) -> Result<bool, KError> {
+    pub fn try_lock(&mut self, poolid: usize, envid: usize) -> Result<bool, KError> {
         match self.pools.get_mut(&poolid) {
             None => Err(KError::PoolNotFound),
-            Some(pool) => Ok(pool.try_lock()),
+            Some(pool) => Ok(pool.try_lock(envid)),
+        }
+    }
+
+    pub fn unlock(&mut self, poolid: usize, envid: usize) -> Result<(), KError> {
+        match self.pools.get_mut(&poolid) {
+            None => Err(KError::PoolNotFound),
+            Some(pool) => pool.unlock(envid),
         }
     }
 }

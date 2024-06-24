@@ -43,7 +43,11 @@ pub enum SyscallNo {
     SysCreatePool,
     /// Bind a memory pool.
     SysFetchPool,
+    /// Try to lock a memory pool.
+    SysTryLock,
+    /// Unlock a memory pool.
+    SysUnlock,
 }
 
 /// The count of the syscalls. It should be updated manually.
-pub const MAX_SYS_NO: usize = 20;
+pub const MAX_SYS_NO: usize = 22;

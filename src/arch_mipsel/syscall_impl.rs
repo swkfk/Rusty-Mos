@@ -616,6 +616,26 @@ fn sys_bind_shared_pool(va: u32, id: u32, perm: u32) -> u32 {
     }
 }
 
+fn sys_try_lock(id: u32) -> u32 {
+    match MEMORY_POOL.borrow_mut().try_lock(
+        id as usize,
+        ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].id as usize,
+    ) {
+        Err(r) => r.into(),
+        Ok(b) => b.into(),
+    }
+}
+
+fn sys_unlock(id: u32) -> u32 {
+    match MEMORY_POOL.borrow_mut().unlock(
+        id as usize,
+        ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].id as usize,
+    ) {
+        Err(r) => r.into(),
+        Ok(()) => 0,
+    }
+}
+
 /// Just a type used in the [SYSCALL_TABLE]. A *holder*.
 type SyscallRawPtr = *const ();
 /// The real syscall function type.
@@ -648,6 +668,8 @@ pub const SYSCALL_TABLE: [SyscallRawPtr; MAX_SYS_NO] = [
     sys_read_dev as SyscallRawPtr,
     sys_create_shared_pool as SyscallRawPtr,
     sys_bind_shared_pool as SyscallRawPtr,
+    sys_try_lock as SyscallRawPtr,
+    sys_unlock as SyscallRawPtr,
 ];
 
 /// Get the syscall number and all the five arguments. Invoke the syscall.

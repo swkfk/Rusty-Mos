@@ -26,6 +26,10 @@ pub enum KError {
     PoolDoubleBind,
     /// The env is not binded to the pool
     PoolNotBind,
+    /// Unlock a lock without being locked
+    NoLock,
+    /// Unlock a lock which was locked by another env
+    LockByOthers,
 }
 
 impl From<KError> for u32 {
