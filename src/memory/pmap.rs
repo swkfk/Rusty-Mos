@@ -1,3 +1,5 @@
+//! The page-memory manager model of MOS. Core functions are provided here.
+
 use core::{mem::size_of, ptr};
 
 use crate::utils::linked_list::{LinkList, LinkNode};
@@ -11,24 +13,37 @@ use crate::{
 
 use super::tlbex::tlb_invalidate;
 
+/// Current env's page directary address.
 pub static CUR_PGDIR: SyncImplRef<*mut Pde> = SyncImplRef::new(ptr::null_mut());
+/// The kernel array for all pages.
 pub static PAGES: SyncImplRef<*mut PageNode> = SyncImplRef::new(core::ptr::null_mut());
+/// The list of free pages.
 pub static PAGE_FREE_LIST: SyncImplRef<PageList> = SyncImplRef::new(PageList::new());
+/// The kernel heap start. Used by the buddy system.
 pub static KERN_HEAP: SyncImplRef<*mut PageNode> = SyncImplRef::new(core::ptr::null_mut());
+/// The the count of all the pages available.
 pub static NPAGE: SyncImplRef<usize> = SyncImplRef::new(0);
 
+/// The page size is 4 KB.
 const PAGE_SIZE: usize = 4096;
 
+/// Page list, for the 'free_list'. See Also: [PAGE_FREE_LIST].
 pub type PageList = LinkList<PageData>;
+/// Node in the page list.
 pub type PageNode = LinkNode<PageData>;
+/// The page directory entry type alias.
 pub type Pde = u32;
+/// The page table entry type alias.
 pub type Pte = u32;
 
+/// The only page data needed to maintain.
 #[derive(Clone, Copy)]
 pub struct PageData {
+    /// The reference count of the page.
     pub pp_ref: u16,
 }
 
+/// Calculate the [NPAGE] and validate it.
 pub fn mips_detect_memory(memsize: usize) {
     *NPAGE.borrow_mut() = memsize / 4096;
     println!(
@@ -38,6 +53,10 @@ pub fn mips_detect_memory(memsize: usize) {
     );
 }
 
+/// Alloc needed memorys in kernel mode. Only use it before the page-manager
+/// is ready to use.
+///
+/// The `freemem` will be updated to mark the memory used.
 fn alloc(
     freemem: &mut usize,
     memsize: usize,
@@ -69,6 +88,8 @@ fn alloc(
     alloced_mem as *mut PageNode
 }
 
+/// Alloc memories needed for the [PAGES] and reserve 512 * 4KB spaces for the
+/// buddy system to alloc.
 pub fn mips_vm_init(freemem: &mut usize, memsize: usize) {
     *PAGES.borrow_mut() = alloc(
         freemem,
@@ -87,6 +108,7 @@ pub fn mips_vm_init(freemem: &mut usize, memsize: usize) {
     debugln!("> pmap.rs: mips vm init success");
 }
 
+/// Init all the pages. Mark the pages below the `freemem` as *used*.
 pub fn page_init(freemem: &mut usize) {
     let pages = *PAGES.borrow_mut();
 
@@ -107,6 +129,8 @@ pub fn page_init(freemem: &mut usize) {
     }
 }
 
+/// Alloc a page. Return the page's address or an error if no free pages
+/// available.
 pub fn page_alloc() -> Result<*mut PageNode, KError> {
     match (*PAGE_FREE_LIST.borrow_mut()).pop_head() {
         None => Err(KError::NoMem),
@@ -121,11 +145,16 @@ pub fn page_alloc() -> Result<*mut PageNode, KError> {
     }
 }
 
+/// Free a page. The `pp_ref` *shall* be *zero* before freeing it.
+///
+/// Otherwise, the kernel will panic.
 pub fn page_free(page: &mut *mut PageNode) {
     assert_eq!(0, unsafe { **page }.data.pp_ref);
     (*PAGE_FREE_LIST.borrow_mut()).insert_head(*page);
 }
 
+/// Decrease the page's `pp_ref`. If all reference is removed, the page will
+/// be freed.
 pub fn page_decref(page: &mut *mut PageNode) {
     assert!(unsafe { **page }.data.pp_ref > 0);
     unsafe { (**page).data.pp_ref -= 1 };
@@ -134,6 +163,16 @@ pub fn page_decref(page: &mut *mut PageNode) {
     }
 }
 
+/// Walk the current page table to find the virtual address `va`'s page table
+/// entry ([Pte]).
+///
+/// If the pte is not found or is invalid, the parameter `create` determines
+/// whether to create a new entry or just return an error.
+///
+/// # Return
+///
+/// Return the pte address found with a `Ok` wrapper or the [KError] with an
+/// `Err` wrapper if failed.
 pub fn pgdir_walk(pgdir: *mut Pde, va: usize, create: bool) -> Result<*mut Pte, KError> {
     let pgdir_entryp = (pgdir as u32 + (PDX!(va) * size_of::<Pde>()) as u32) as *mut Pte;
     if 0 == PTE_V & unsafe { *(pgdir_entryp as *const Pte) } {
@@ -159,8 +198,11 @@ pub fn pgdir_walk(pgdir: *mut Pde, va: usize, create: bool) -> Result<*mut Pte, 
     }
 }
 
-/// # Safety
+/// Map the physical `page` to the virtual address `va`. The permission bits
+/// will be set to `perm | PTE_C_CACHEABLE | PTE_V`.
 ///
+/// If there is already a page mapped at `va`, [page_remove] will be invoked
+/// to unmap it.
 pub fn page_insert(
     pgdir: *mut Pde,
     va: usize,
@@ -196,6 +238,8 @@ pub fn page_insert(
     Ok(())
 }
 
+/// Look up the Page that virtual address `va` map to. Return the page and the
+/// page table entry together if the page is found and is valid.
 pub fn page_lookup(pgdir: *mut Pde, va: usize) -> Option<(*mut PageNode, *mut Pte)> {
     if let Ok(pte) = pgdir_walk(pgdir, va, false) {
         if pte.is_null() || unsafe { *pte & PTE_V == 0 } {
@@ -209,6 +253,7 @@ pub fn page_lookup(pgdir: *mut Pde, va: usize) -> Option<(*mut PageNode, *mut Pt
     }
 }
 
+/// Unmap the physical page at virtual address `va`.
 pub fn page_remove(pgdir: *mut Pde, va: usize, asid: u32) {
     if let Some((mut pp, pte)) = page_lookup(pgdir, va) {
         page_decref(&mut pp);

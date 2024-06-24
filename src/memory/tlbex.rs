@@ -13,9 +13,11 @@ use crate::memory::pmap::{page_alloc, page_insert, page_lookup, Pde, Pte, CUR_PG
 use crate::arch_mipsel::trap::TrapFrame;
 
 extern "C" {
+    /// ASM-Functions. Clear the tlb entry.
     pub fn tlb_out(entryhi: u32);
 }
 
+/// Invalidate the specified tlb entry.
 pub fn tlb_invalidate(asid: u32, va: usize) {
     let entryhi = (va & !GEN_MASK!(PGSHIFT, 0)) as u32 | (asid & (NASID - 1));
     unsafe {
@@ -23,6 +25,7 @@ pub fn tlb_invalidate(asid: u32, va: usize) {
     }
 }
 
+/// Alloc a page and map it to the virtual address `va`.
 fn passive_alloc(va: usize, pgdir: *mut Pde, asid: u32) {
     if va < UTEMP {
         panic!("Address too low");
@@ -54,6 +57,7 @@ fn passive_alloc(va: usize, pgdir: *mut Pde, asid: u32) {
     .unwrap();
 }
 
+/// Do TLB Refill.
 #[no_mangle]
 pub fn _do_tlb_refill(pentrylo: &mut [u32; 2], va: usize, asid: u32) {
     tlb_invalidate(asid, va);
@@ -74,8 +78,9 @@ pub fn _do_tlb_refill(pentrylo: &mut [u32; 2], va: usize, asid: u32) {
     }
 }
 
-/// # Safety
-///
+/// Handle the TLB Mod Exception. Invoke the
+/// [tlb_mod_entry](crate::process::envs::EnvData::user_tlb_mod_entry) via
+/// `eret`.
 #[no_mangle]
 pub fn do_tlb_mod(trapframe: *mut TrapFrame) {
     let tf = trapframe; // deceits
