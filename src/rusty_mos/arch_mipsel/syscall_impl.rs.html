@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/arch_mipsel/syscall_impl.rs`."><title>syscall_impl.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (3cb521a43 2024-06-22)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/arch_mipsel/syscall_impl.rs`."><title>syscall_impl.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (bcf94dec5 2024-06-23)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -408,7 +408,204 @@
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
 <a href="#410" id="410">410</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>core::{
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
+<a href="#498" id="498">498</a>
+<a href="#499" id="499">499</a>
+<a href="#500" id="500">500</a>
+<a href="#501" id="501">501</a>
+<a href="#502" id="502">502</a>
+<a href="#503" id="503">503</a>
+<a href="#504" id="504">504</a>
+<a href="#505" id="505">505</a>
+<a href="#506" id="506">506</a>
+<a href="#507" id="507">507</a>
+<a href="#508" id="508">508</a>
+<a href="#509" id="509">509</a>
+<a href="#510" id="510">510</a>
+<a href="#511" id="511">511</a>
+<a href="#512" id="512">512</a>
+<a href="#513" id="513">513</a>
+<a href="#514" id="514">514</a>
+<a href="#515" id="515">515</a>
+<a href="#516" id="516">516</a>
+<a href="#517" id="517">517</a>
+<a href="#518" id="518">518</a>
+<a href="#519" id="519">519</a>
+<a href="#520" id="520">520</a>
+<a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Syscall implementations.
+
+</span><span class="kw">use </span>core::{
     fmt::{Display, Write},
     mem::size_of,
     sync::atomic::Ordering::SeqCst,
@@ -435,13 +632,24 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::process::scheduler::schedule;
 
-<span class="comment">// type PureResult = Result&lt;(), KError&gt;;
-
+<span class="doccomment">/// SYSNO: 0, just show a character on the console.
+///
+/// For this implementation, it will call the [print_charc] function directly.
 </span><span class="kw">fn </span>sys_putchar(ch: u8) {
     print_charc(ch);
 }
 
-<span class="kw">fn </span>sys_print_cons(s: <span class="kw-2">*const </span>u8, num: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 1, show one `num`-lengthed string on the console.
+///
+/// It will call the [print_charc] function one by one to put each characters.
+///
+/// The string *SHALL* be under the [UTOP] wholy.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError::Invalid] if any of the string
+/// is above the [UTOP].
+</span><span class="kw">fn </span>sys_print_cons(s: <span class="kw-2">*const </span>u8, num: u32) -&gt; u32 {
     <span class="kw">let </span>num = num <span class="kw">as </span>usize;
     <span class="kw">if </span>s <span class="kw">as </span>usize + num &gt; UTOP || s <span class="kw">as </span>usize &gt; UTOP || s <span class="kw">as </span>usize &gt; s <span class="kw">as </span>usize + num {
         <span class="kw">return </span>KError::Invalid.into();
@@ -453,15 +661,26 @@
     <span class="number">0
 </span>}
 
-<span class="kw">fn </span>sys_getenvid() -&gt; u32 {
+<span class="doccomment">/// SYSNO: 2, get the [EnvData::id](crate::process::envs::EnvData::id) or the
+/// **pid**. (a.k.a in Linux) of the *current* env.
+</span><span class="kw">fn </span>sys_getenvid() -&gt; u32 {
     ENVS_DATA.borrow().<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].id
 }
 
-<span class="kw">fn </span>sys_yield() -&gt; ! {
+<span class="doccomment">/// SYSNO: 3, give out the CPU, re-[schedule]. *NO-RETURN*
+</span><span class="kw">fn </span>sys_yield() -&gt; ! {
     schedule(<span class="bool-val">true</span>)
 }
 
-<span class="kw">fn </span>sys_env_destroy(envid: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 4, destory a specified env with the
+/// [id](crate::process::envs::EnvData::id) of `envid`.
+///
+/// Only the *current* env or the *child* of the current env can be destoried.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError] returned by [envid2env].
+</span><span class="kw">fn </span>sys_env_destroy(envid: u32) -&gt; u32 {
     <span class="kw">let </span>e = envid2env(envid, <span class="bool-val">true</span>);
     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = e {
         <span class="kw">return </span>e.into();
@@ -476,7 +695,15 @@
     <span class="number">0
 </span>}
 
-<span class="kw">fn </span>sys_set_tlb_mod_entry(envid: u32, func: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 5, set the specified env's
+/// [user_tlb_mod_entry](crate::process::envs::EnvData::user_tlb_mod_entry).
+///
+/// Only the *current* env's or the *child* of the current env's entry can be set.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError] returned by [envid2env].
+</span><span class="kw">fn </span>sys_set_tlb_mod_entry(envid: u32, func: u32) -&gt; u32 {
     <span class="kw">let </span>e = envid2env(envid, <span class="bool-val">true</span>);
     <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = e {
         <span class="kw">return </span>e.into();
@@ -486,7 +713,22 @@
     <span class="number">0
 </span>}
 
-<span class="kw">fn </span>sys_mem_alloc(envid: u32, va: u32, perm: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 6, alloc a page and map it to `va`.
+///
+/// The `perm` is used when insert the page [alloced](page_alloc) into the
+/// env's page table.
+///
+/// Only the *current* env or the *child* of the current env can be allocated.
+///
+/// If `va` is already mapped, that original page is sliently unmapped.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError] returned by [envid2env],
+/// [page_alloc] and [page_insert].
+///
+/// For example, the `envid` is not allowed or the pages are ran out.
+</span><span class="kw">fn </span>sys_mem_alloc(envid: u32, va: u32, perm: u32) -&gt; u32 {
     <span class="kw">let </span>va = va <span class="kw">as </span>usize;
     <span class="kw">if </span>!(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>va) {
         <span class="kw">return </span>KError::Invalid.into();
@@ -514,7 +756,24 @@
     <span class="number">0
 </span>}
 
-<span class="kw">fn </span>sys_mem_map(src_id: u32, src_va: u32, dst_id: u32, dst_va: u32, perm: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 7, map a page from one env (`src_id`) to another (`dst_id`).
+///
+/// Get the page with the virtual address (`src_va`) in the env (`src_id`), and
+/// map it into the virtual address (`dst_va`) in the env (`dst_id`).
+///
+/// Both the source env and the destination env *shall* be the *current* env or
+/// the *child* of the current env.
+///
+/// See Also: [sys_mem_unmap]
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError] returned by [envid2env],
+/// [page_lookup] and [page_insert].
+///
+/// This syscall will return a negated-[KError::Invalid] if any of the virtual
+/// address is above the [UTOP] or below the [UTEMP].
+</span><span class="kw">fn </span>sys_mem_map(src_id: u32, src_va: u32, dst_id: u32, dst_va: u32, perm: u32) -&gt; u32 {
     <span class="kw">let </span>src_va = src_va <span class="kw">as </span>usize;
     <span class="kw">let </span>dst_va = dst_va <span class="kw">as </span>usize;
     <span class="kw">if </span>!(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>src_va) || !(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>dst_va) {
@@ -553,7 +812,19 @@
     </span>}
 }
 
-<span class="kw">fn </span>sys_mem_unmap(envid: u32, va: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 8, cancel the map of the specified virtual address for the specified
+/// env.
+///
+/// The env *shall* be the *current* env or the *child* of the current env.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError] returned by [envid2env] and
+/// [page_remove].
+///
+/// This syscall will return a negated-[KError::Invalid] if the virtual address
+/// is above the [UTOP] or below the [UTEMP].
+</span><span class="kw">fn </span>sys_mem_unmap(envid: u32, va: u32) -&gt; u32 {
     <span class="kw">let </span>va = va <span class="kw">as </span>usize;
     <span class="kw">if </span>!(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>va) {
         <span class="kw">return </span>KError::Invalid.into();
@@ -571,7 +842,15 @@
     <span class="number">0
 </span>}
 
-<span class="kw">fn </span>sys_exofork() -&gt; u32 {
+<span class="doccomment">/// SYSNO: 9, fork a new env which will be the *child* of the *current* env.
+///
+/// For the child, the priority will be same with its parent and the trap frame
+/// also. The ruturn value will be set to *zero* to mark the child.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError] returned by [env_alloc].
+</span><span class="kw">fn </span>sys_exofork() -&gt; u32 {
     <span class="kw">let </span>env_data = ENVS_DATA.borrow();
     <span class="kw">let </span>id = env_data.<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].id;
     drop(env_data);
@@ -590,7 +869,21 @@
     env_data.<span class="number">0</span>[e].id
 }
 
-<span class="kw">fn </span>sys_set_env_status(envid: u32, status: EnvStatus) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 10, set the run status of the specified env.
+///
+/// The `status` can only be [EnvStatus::Runnable] or [EnvStatus::NotRunnable].
+/// The env will be added to or removed from the [ENV_SCHE_LIST] to be or be
+/// not scheduled.
+///
+/// The env *shall* be the *current* env or the *child* of the current env.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError::Invalid] if the `status` is
+/// not allowed.
+///
+/// This syscall will return a negated-[KError] returned by [envid2env].
+</span><span class="kw">fn </span>sys_set_env_status(envid: u32, status: EnvStatus) -&gt; u32 {
     <span class="kw">if </span>status != EnvStatus::NotRunnable &amp;&amp; status != EnvStatus::Runnable {
         <span class="kw">return </span>KError::Invalid.into();
     }
@@ -614,7 +907,19 @@
     <span class="number">0
 </span>}
 
-<span class="kw">fn </span>sys_set_trapframe(envid: u32, trapframe: <span class="kw-2">*mut </span>TrapFrame) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 11, set the trapframe of the specified env.
+///
+/// The env *shall* be the *current* env or the *child* of the current env.
+///
+/// The raw pointer `trapframe` *shall* be in the \[[UTEMP], [UTOP]) range.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError::Invalid] if the `trapframe` is
+/// not out of the required range.
+///
+/// This syscall will return a negated-[KError] returned by [envid2env].
+</span><span class="kw">fn </span>sys_set_trapframe(envid: u32, trapframe: <span class="kw-2">*mut </span>TrapFrame) -&gt; u32 {
     <span class="kw">let </span>len = size_of::&lt;TrapFrame&gt;();
     <span class="kw">let </span>va = trapframe <span class="kw">as </span>usize;
     <span class="kw">if </span>va.checked_add(len).is_none() || va &lt; UTEMP || va + len &gt; UTOP {
@@ -635,7 +940,11 @@
     </span>}
 }
 
-<span class="kw">struct </span>CLikeStr(<span class="kw-2">*const </span>u8);
+<span class="doccomment">/// A wrapper for the `*const u8`.
+///
+/// This struct is used to formatted-print the C-Style string. (A.k.a
+/// *zero-terminated* string).
+</span><span class="kw">struct </span>CLikeStr(<span class="kw-2">*const </span>u8);
 
 <span class="kw">impl </span>Display <span class="kw">for </span>CLikeStr {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>core::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; core::fmt::Result {
@@ -650,11 +959,32 @@
     }
 }
 
-<span class="kw">fn </span>sys_panic(msg: <span class="kw-2">*const </span>u8) -&gt; ! {
+<span class="doccomment">/// SYSNO: 12, trigger the kernel's panic with the given C-Style string.
+///
+/// # Panic
+///
+/// This syscall will *panic* in any situation.
+</span><span class="kw">fn </span>sys_panic(msg: <span class="kw-2">*const </span>u8) -&gt; ! {
     <span class="macro">panic!</span>(<span class="string">"{}"</span>, CLikeStr(msg));
 }
 
-<span class="kw">fn </span>sys_ipc_try_send(envid: u32, value: u32, src_va: u32, perm: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 13, Try to send a ipc-message to the target env.
+///
+/// The message will be a value together with a page if the `src_va` is *not*
+/// zero. And the page will be inserted into the `envid`'s `dst_va`. The
+/// value will be written to the target env's PCB.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError::Invalid] if the `src_va` is
+/// not zero and is not in the \[[UTEMP, UTOP]) range.
+///
+/// This syscall will return a negated-[KError::IpcNotRecv] if the `envid` is
+/// not ready for receiving.
+///
+/// This syscall will return a negated-[KError] returned by [envid2env],
+/// [page_lookup] and [page_insert].
+</span><span class="kw">fn </span>sys_ipc_try_send(envid: u32, value: u32, src_va: u32, perm: u32) -&gt; u32 {
     <span class="kw">let </span>src_va = src_va <span class="kw">as </span>usize;
     <span class="kw">if </span>src_va != <span class="number">0 </span>&amp;&amp; !(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>src_va) {
         <span class="kw">return </span>KError::Invalid.into();
@@ -700,7 +1030,20 @@
     <span class="number">0
 </span>}
 
-<span class="kw">fn </span>sys_ipc_recv(dst_va: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 14, wait for a ipc-message.
+///
+/// The message will be a value together with a page if the `dst_va` is not
+/// *zero*.
+///
+/// The current env will be *blocked*.
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError::Invalid] if the `dst_va` is
+/// not zero and is not in the \[[UTEMP, UTOP]) range.
+///
+/// This syscall will not return if everything goes smooth.
+</span><span class="kw">fn </span>sys_ipc_recv(dst_va: u32) -&gt; u32 {
     <span class="kw">let </span>dst_va = dst_va <span class="kw">as </span>usize;
     <span class="kw">if </span>dst_va != <span class="number">0 </span>&amp;&amp; !(UTEMP..UTOP).contains(<span class="kw-2">&amp;</span>dst_va) {
         <span class="kw">return </span>KError::Invalid.into();
@@ -718,7 +1061,11 @@
     schedule(<span class="bool-val">true</span>);
 }
 
-<span class="kw">fn </span>sys_cgetc() -&gt; u8 {
+<span class="doccomment">/// SYSNO: 15, read a char from the console via [scan_charc].
+///
+/// **ATTENTION**! Kernel does busy waiting here and all the envs will be
+/// blocked.
+</span><span class="kw">fn </span>sys_cgetc() -&gt; u8 {
     <span class="kw">loop </span>{
         <span class="kw">let </span>ch = scan_charc();
         <span class="kw">if </span>ch != <span class="number">0 </span>{
@@ -727,7 +1074,25 @@
     }
 }
 
-<span class="kw">fn </span>sys_write_dev(va: u32, pa: u32, len: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 16, write data at `va` into `pa` with the length of `len`.
+///
+/// The `len` can only be in `1`, `2` or `4`.
+///
+/// All the valid devices and their physical address ranges are as follows:
+///
+/// |  device  | start address | length |
+/// |:--------:|:-------------:|:------:|
+/// | console  |  0x180003f8   |  0x20  |
+/// | IDE disk |  0x180001f0   |  0x8   |
+///
+/// See Also: [sys_read_dev]
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError::Invalid] if the `va` is out of
+/// the \[[UTEMP, UTOP]) range, or the `pa` is invalid or the `len` is invalid.
+
+</span><span class="kw">fn </span>sys_write_dev(va: u32, pa: u32, len: u32) -&gt; u32 {
     <span class="kw">let </span>va = va <span class="kw">as </span>usize;
     <span class="kw">let </span>pa = pa <span class="kw">as </span>usize;
     <span class="kw">let </span>len = len <span class="kw">as </span>usize;
@@ -748,7 +1113,19 @@
     <span class="number">0
 </span>}
 
-<span class="kw">fn </span>sys_read_dev(va: u32, pa: u32, len: u32) -&gt; u32 {
+<span class="doccomment">/// SYSNO: 17, read data from `pa` into `va` with the length of `len`.
+///
+/// The `len` can only be in `1`, `2` or `4`.
+///
+/// The `pa` is the same as that in [sys_write_dev].
+///
+/// See Also: [sys_write_dev]
+///
+/// # Failure
+///
+/// This syscall will return a negated-[KError::Invalid] if the `va` is out of
+/// the \[[UTEMP, UTOP]) range, or the `pa` is invalid or the `len` is invalid.
+</span><span class="kw">fn </span>sys_read_dev(va: u32, pa: u32, len: u32) -&gt; u32 {
     <span class="kw">let </span>va = va <span class="kw">as </span>usize;
     <span class="kw">let </span>pa = pa <span class="kw">as </span>usize;
     <span class="kw">let </span>len = len <span class="kw">as </span>usize;
@@ -769,10 +1146,18 @@
     <span class="number">0
 </span>}
 
-<span class="kw">type </span>SyscallRawPtr = <span class="kw-2">*const </span>();
-<span class="kw">type </span>SyscallFn = <span class="kw">fn</span>(u32, u32, u32, u32, u32) -&gt; u32;
+<span class="doccomment">/// Just a type used in the [SYSCALL_TABLE]. A *holder*.
+</span><span class="kw">type </span>SyscallRawPtr = <span class="kw-2">*const </span>();
+<span class="doccomment">/// The real syscall function type.
+///
+/// It takes 5 32-bit arguments and return a 32-bit integer. Normally, a return
+/// value of a negative number marks something bad happened.
+///
+/// **ATTENTION**! Some of the functions are *no-return*.
+</span><span class="kw">type </span>SyscallFn = <span class="kw">fn</span>(u32, u32, u32, u32, u32) -&gt; u32;
 
-<span class="kw">pub const </span>SYSCALL_TABLE: [SyscallRawPtr; MAX_SYS_NO] = [
+<span class="doccomment">/// Syscall function table. Indexed with the syscall number.
+</span><span class="kw">pub const </span>SYSCALL_TABLE: [SyscallRawPtr; MAX_SYS_NO] = [
     sys_putchar <span class="kw">as </span>SyscallRawPtr,
     sys_print_cons <span class="kw">as </span>SyscallRawPtr,
     sys_getenvid <span class="kw">as </span>SyscallRawPtr,
@@ -793,15 +1178,20 @@
     sys_read_dev <span class="kw">as </span>SyscallRawPtr,
 ];
 
-<span class="doccomment">/// # Safety
+<span class="doccomment">/// Get the syscall number and all the five arguments. Invoke the syscall.
 ///
+/// The fourth and fifth argument is loaded from the stack. And the return
+/// value will be stored into the `$v0`.
+///
+/// If the syscall number is invalid (out of the range([MAX_SYS_NO])), the
+/// return value will be *set* as negated-[KError::NoSys];
 </span><span class="attr">#[no_mangle]
 </span><span class="kw">pub fn </span>do_syscall(trapframe: <span class="kw-2">*mut </span>TrapFrame) {
     <span class="kw">let </span>tf_p = trapframe; <span class="comment">// deceits
     </span><span class="kw">let </span>tf = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>tf_p };
     <span class="kw">let </span>sysno = tf.regs[<span class="number">4</span>];
     <span class="kw">if </span>!(<span class="number">0</span>..MAX_SYS_NO <span class="kw">as </span>u32).contains(<span class="kw-2">&amp;</span>sysno) {
-        <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>tf_p).regs[<span class="number">2</span>] = KError::NoSys <span class="kw">as </span>u32 }
+        <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>tf_p).regs[<span class="number">2</span>] = KError::NoSys.into() }
         <span class="kw">return</span>;
     }
     <span class="kw">unsafe </span>{ (<span class="kw-2">*</span>tf_p).cp0_epc += size_of::&lt;u32&gt;() <span class="kw">as </span>u32 }
