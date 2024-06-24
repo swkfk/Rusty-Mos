@@ -2,10 +2,9 @@
 #![no_std]
 #![no_main]
 
-use core::{arch::global_asm, include_str, panic::PanicInfo};
+use core::{arch::global_asm, include_str};
 
 use rusty_mos::{
-    arch_mipsel::machine::halt,
     debugln,
     memory::pmap::{mips_detect_memory, mips_vm_init, page_init},
     println,
@@ -19,13 +18,6 @@ global_asm!(include_str!("arch_mipsel/asm/entry.S"));
 global_asm!(include_str!("arch_mipsel/asm/genex.S"));
 global_asm!(include_str!("arch_mipsel/asm/kclock.S"));
 global_asm!(include_str!("arch_mipsel/asm/env.S"));
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("\x1b[31mKernel Panic!");
-    println!("{}\x1b[0m", info);
-    halt();
-}
 
 #[cfg(mos_build)]
 use core::ptr::addr_of;
