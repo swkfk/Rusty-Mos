@@ -42,7 +42,7 @@ impl MemoryPoolEntry {
         }
     }
 
-    pub fn try_lock(&mut self, envid: usize) -> bool {
+    pub fn lock(&mut self, envid: usize) -> bool {
         self.write_lock.compare_exchange(0, envid, SeqCst, SeqCst) == Ok(0)
     }
 
@@ -118,10 +118,10 @@ impl MemoryPool {
         }
     }
 
-    pub fn try_lock(&mut self, poolid: usize, envid: usize) -> Result<bool, KError> {
+    pub fn lock(&mut self, poolid: usize, envid: usize) -> Result<bool, KError> {
         match self.pools.get_mut(&poolid) {
             None => Err(KError::PoolNotFound),
-            Some(pool) => Ok(pool.try_lock(envid)),
+            Some(pool) => Ok(pool.lock(envid)),
         }
     }
 

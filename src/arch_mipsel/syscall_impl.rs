@@ -616,8 +616,8 @@ fn sys_bind_shared_pool(va: u32, id: u32, perm: u32) -> u32 {
     }
 }
 
-fn sys_try_lock(id: u32) -> u32 {
-    match MEMORY_POOL.borrow_mut().try_lock(
+fn sys_lock(id: u32) -> u32 {
+    match MEMORY_POOL.borrow_mut().lock(
         id as usize,
         ENVS_DATA.borrow().0[CUR_ENV_IDX.load(SeqCst)].id as usize,
     ) {
@@ -668,7 +668,7 @@ pub const SYSCALL_TABLE: [SyscallRawPtr; MAX_SYS_NO] = [
     sys_read_dev as SyscallRawPtr,
     sys_create_shared_pool as SyscallRawPtr,
     sys_bind_shared_pool as SyscallRawPtr,
-    sys_try_lock as SyscallRawPtr,
+    sys_lock as SyscallRawPtr,
     sys_unlock as SyscallRawPtr,
 ];
 
