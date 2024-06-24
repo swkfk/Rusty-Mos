@@ -119,5 +119,5 @@ pub static MEMORY_POOL: SyncImplRef<MemoryPool> = SyncImplRef::new(MemoryPool::n
 static POOL_I: AtomicUsize = AtomicUsize::new(1);
 
 fn mkpoolid(envid: usize) -> usize {
-    POOL_I.fetch_add(1, SeqCst) << (1 + LOG2NENV) | (envid * (NENV - 1))
+    (POOL_I.fetch_add(1, SeqCst) << (1 + LOG2NENV)) | (envid & (NENV - 1))
 }
