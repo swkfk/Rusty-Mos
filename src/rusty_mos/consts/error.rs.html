@@ -49,6 +49,10 @@
 <a href="#49" id="49">49</a>
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
+<a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Define the Error Code in mos.
 //!
 //! Include both the kernel error ([KError]) and the user error([UError]).
@@ -77,6 +81,10 @@
     </span>PoolDoubleBind,
     <span class="doccomment">/// The env is not binded to the pool
     </span>PoolNotBind,
+    <span class="doccomment">/// Unlock a lock without being locked
+    </span>NoLock,
+    <span class="doccomment">/// Unlock a lock which was locked by another env
+    </span>LockByOthers,
 }
 
 <span class="kw">impl </span>From&lt;KError&gt; <span class="kw">for </span>u32 {
