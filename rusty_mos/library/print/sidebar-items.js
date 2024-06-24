@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["_print","_write_str"]};
+window.SIDEBAR_ITEMS = {"fn":["_print"]};

@@ -216,7 +216,54 @@
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
 <a href="#218" id="218">218</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>core::{mem::size_of, ptr};
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! The page-memory manager model of MOS. Core functions are provided here.
+
+</span><span class="kw">use </span>core::{mem::size_of, ptr};
 
 <span class="kw">use </span><span class="kw">crate</span>::utils::linked_list::{LinkList, LinkNode};
 <span class="kw">use </span><span class="kw">crate</span>::utils::sync_ref_cell::SyncImplRef;
@@ -229,25 +276,38 @@
 
 <span class="kw">use </span><span class="kw">super</span>::tlbex::tlb_invalidate;
 
-<span class="kw">pub static </span>CUR_PGDIR: SyncImplRef&lt;<span class="kw-2">*mut </span>Pde&gt; = SyncImplRef::new(ptr::null_mut());
-<span class="kw">pub static </span>PAGES: SyncImplRef&lt;<span class="kw-2">*mut </span>PageNode&gt; = SyncImplRef::new(core::ptr::null_mut());
-<span class="kw">pub static </span>PAGE_FREE_LIST: SyncImplRef&lt;PageList&gt; = SyncImplRef::new(PageList::new());
-<span class="kw">pub static </span>KERN_HEAP: SyncImplRef&lt;<span class="kw-2">*mut </span>PageNode&gt; = SyncImplRef::new(core::ptr::null_mut());
-<span class="kw">pub static </span>NPAGE: SyncImplRef&lt;usize&gt; = SyncImplRef::new(<span class="number">0</span>);
+<span class="doccomment">/// Current env's page directary address.
+</span><span class="kw">pub static </span>CUR_PGDIR: SyncImplRef&lt;<span class="kw-2">*mut </span>Pde&gt; = SyncImplRef::new(ptr::null_mut());
+<span class="doccomment">/// The kernel array for all pages.
+</span><span class="kw">pub static </span>PAGES: SyncImplRef&lt;<span class="kw-2">*mut </span>PageNode&gt; = SyncImplRef::new(core::ptr::null_mut());
+<span class="doccomment">/// The list of free pages.
+</span><span class="kw">pub static </span>PAGE_FREE_LIST: SyncImplRef&lt;PageList&gt; = SyncImplRef::new(PageList::new());
+<span class="doccomment">/// The kernel heap start. Used by the buddy system.
+</span><span class="kw">pub static </span>KERN_HEAP: SyncImplRef&lt;<span class="kw-2">*mut </span>PageNode&gt; = SyncImplRef::new(core::ptr::null_mut());
+<span class="doccomment">/// The the count of all the pages available.
+</span><span class="kw">pub static </span>NPAGE: SyncImplRef&lt;usize&gt; = SyncImplRef::new(<span class="number">0</span>);
 
-<span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
+<span class="doccomment">/// The page size is 4 KB.
+</span><span class="kw">const </span>PAGE_SIZE: usize = <span class="number">4096</span>;
 
-<span class="kw">pub type </span>PageList = LinkList&lt;PageData&gt;;
-<span class="kw">pub type </span>PageNode = LinkNode&lt;PageData&gt;;
-<span class="kw">pub type </span>Pde = u32;
-<span class="kw">pub type </span>Pte = u32;
+<span class="doccomment">/// Page list, for the 'free_list'. See Also: [PAGE_FREE_LIST].
+</span><span class="kw">pub type </span>PageList = LinkList&lt;PageData&gt;;
+<span class="doccomment">/// Node in the page list.
+</span><span class="kw">pub type </span>PageNode = LinkNode&lt;PageData&gt;;
+<span class="doccomment">/// The page directory entry type alias.
+</span><span class="kw">pub type </span>Pde = u32;
+<span class="doccomment">/// The page table entry type alias.
+</span><span class="kw">pub type </span>Pte = u32;
 
-<span class="attr">#[derive(Clone, Copy)]
+<span class="doccomment">/// The only page data needed to maintain.
+</span><span class="attr">#[derive(Clone, Copy)]
 </span><span class="kw">pub struct </span>PageData {
-    <span class="kw">pub </span>pp_ref: u16,
+    <span class="doccomment">/// The reference count of the page.
+    </span><span class="kw">pub </span>pp_ref: u16,
 }
 
-<span class="kw">pub fn </span>mips_detect_memory(memsize: usize) {
+<span class="doccomment">/// Calculate the [NPAGE] and validate it.
+</span><span class="kw">pub fn </span>mips_detect_memory(memsize: usize) {
     <span class="kw-2">*</span>NPAGE.borrow_mut() = memsize / <span class="number">4096</span>;
     <span class="macro">println!</span>(
         <span class="string">"Memory Size: {} KiB; Page Number: {}."</span>,
@@ -256,7 +316,11 @@
     );
 }
 
-<span class="kw">fn </span>alloc(
+<span class="doccomment">/// Alloc needed memorys in kernel mode. Only use it before the page-manager
+/// is ready to use.
+///
+/// The `freemem` will be updated to mark the memory used.
+</span><span class="kw">fn </span>alloc(
     freemem: <span class="kw-2">&amp;mut </span>usize,
     memsize: usize,
     n: usize,
@@ -287,7 +351,9 @@
     alloced_mem <span class="kw">as </span><span class="kw-2">*mut </span>PageNode
 }
 
-<span class="kw">pub fn </span>mips_vm_init(freemem: <span class="kw-2">&amp;mut </span>usize, memsize: usize) {
+<span class="doccomment">/// Alloc memories needed for the [PAGES] and reserve 512 * 4KB spaces for the
+/// buddy system to alloc.
+</span><span class="kw">pub fn </span>mips_vm_init(freemem: <span class="kw-2">&amp;mut </span>usize, memsize: usize) {
     <span class="kw-2">*</span>PAGES.borrow_mut() = alloc(
         freemem,
         memsize,
@@ -305,7 +371,8 @@
     <span class="macro">debugln!</span>(<span class="string">"&gt; pmap.rs: mips vm init success"</span>);
 }
 
-<span class="kw">pub fn </span>page_init(freemem: <span class="kw-2">&amp;mut </span>usize) {
+<span class="doccomment">/// Init all the pages. Mark the pages below the `freemem` as *used*.
+</span><span class="kw">pub fn </span>page_init(freemem: <span class="kw-2">&amp;mut </span>usize) {
     <span class="kw">let </span>pages = <span class="kw-2">*</span>PAGES.borrow_mut();
 
     <span class="kw-2">*</span>freemem = <span class="macro">ROUND!</span>(<span class="kw-2">*</span>freemem; PAGE_SIZE);
@@ -325,7 +392,9 @@
     }
 }
 
-<span class="kw">pub fn </span>page_alloc() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">*mut </span>PageNode, KError&gt; {
+<span class="doccomment">/// Alloc a page. Return the page's address or an error if no free pages
+/// available.
+</span><span class="kw">pub fn </span>page_alloc() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">*mut </span>PageNode, KError&gt; {
     <span class="kw">match </span>(<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).pop_head() {
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(KError::NoMem),
         <span class="prelude-val">Some</span>(pp) =&gt; <span class="kw">unsafe </span>{
@@ -339,12 +408,17 @@
     }
 }
 
-<span class="kw">pub fn </span>page_free(page: <span class="kw-2">&amp;mut *mut </span>PageNode) {
+<span class="doccomment">/// Free a page. The `pp_ref` *shall* be *zero* before freeing it.
+///
+/// Otherwise, the kernel will panic.
+</span><span class="kw">pub fn </span>page_free(page: <span class="kw-2">&amp;mut *mut </span>PageNode) {
     <span class="macro">assert_eq!</span>(<span class="number">0</span>, <span class="kw">unsafe </span>{ <span class="kw-2">**</span>page }.data.pp_ref);
     (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).insert_head(<span class="kw-2">*</span>page);
 }
 
-<span class="kw">pub fn </span>page_decref(page: <span class="kw-2">&amp;mut *mut </span>PageNode) {
+<span class="doccomment">/// Decrease the page's `pp_ref`. If all reference is removed, the page will
+/// be freed.
+</span><span class="kw">pub fn </span>page_decref(page: <span class="kw-2">&amp;mut *mut </span>PageNode) {
     <span class="macro">assert!</span>(<span class="kw">unsafe </span>{ <span class="kw-2">**</span>page }.data.pp_ref &gt; <span class="number">0</span>);
     <span class="kw">unsafe </span>{ (<span class="kw-2">**</span>page).data.pp_ref -= <span class="number">1 </span>};
     <span class="kw">if unsafe </span>{ <span class="kw-2">**</span>page }.data.pp_ref == <span class="number">0 </span>{
@@ -352,7 +426,17 @@
     }
 }
 
-<span class="kw">pub fn </span>pgdir_walk(pgdir: <span class="kw-2">*mut </span>Pde, va: usize, create: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">*mut </span>Pte, KError&gt; {
+<span class="doccomment">/// Walk the current page table to find the virtual address `va`'s page table
+/// entry ([Pte]).
+///
+/// If the pte is not found or is invalid, the parameter `create` determines
+/// whether to create a new entry or just return an error.
+///
+/// # Return
+///
+/// Return the pte address found with a `Ok` wrapper or the [KError] with an
+/// `Err` wrapper if failed.
+</span><span class="kw">pub fn </span>pgdir_walk(pgdir: <span class="kw-2">*mut </span>Pde, va: usize, create: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">*mut </span>Pte, KError&gt; {
     <span class="kw">let </span>pgdir_entryp = (pgdir <span class="kw">as </span>u32 + (<span class="macro">PDX!</span>(va) * size_of::&lt;Pde&gt;()) <span class="kw">as </span>u32) <span class="kw">as </span><span class="kw-2">*mut </span>Pte;
     <span class="kw">if </span><span class="number">0 </span>== PTE_V &amp; <span class="kw">unsafe </span>{ <span class="kw-2">*</span>(pgdir_entryp <span class="kw">as </span><span class="kw-2">*const </span>Pte) } {
         <span class="comment">// Not Valid!
@@ -377,8 +461,11 @@
     }
 }
 
-<span class="doccomment">/// # Safety
+<span class="doccomment">/// Map the physical `page` to the virtual address `va`. The permission bits
+/// will be set to `perm | PTE_C_CACHEABLE | PTE_V`.
 ///
+/// If there is already a page mapped at `va`, [page_remove] will be invoked
+/// to unmap it.
 </span><span class="kw">pub fn </span>page_insert(
     pgdir: <span class="kw-2">*mut </span>Pde,
     va: usize,
@@ -414,7 +501,9 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">pub fn </span>page_lookup(pgdir: <span class="kw-2">*mut </span>Pde, va: usize) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">*mut </span>PageNode, <span class="kw-2">*mut </span>Pte)&gt; {
+<span class="doccomment">/// Look up the Page that virtual address `va` map to. Return the page and the
+/// page table entry together if the page is found and is valid.
+</span><span class="kw">pub fn </span>page_lookup(pgdir: <span class="kw-2">*mut </span>Pde, va: usize) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">*mut </span>PageNode, <span class="kw-2">*mut </span>Pte)&gt; {
     <span class="kw">if let </span><span class="prelude-val">Ok</span>(pte) = pgdir_walk(pgdir, va, <span class="bool-val">false</span>) {
         <span class="kw">if </span>pte.is_null() || <span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte &amp; PTE_V == <span class="number">0 </span>} {
             <span class="prelude-val">None
@@ -427,7 +516,8 @@
     </span>}
 }
 
-<span class="kw">pub fn </span>page_remove(pgdir: <span class="kw-2">*mut </span>Pde, va: usize, asid: u32) {
+<span class="doccomment">/// Unmap the physical page at virtual address `va`.
+</span><span class="kw">pub fn </span>page_remove(pgdir: <span class="kw-2">*mut </span>Pde, va: usize, asid: u32) {
     <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw-2">mut </span>pp, pte)) = page_lookup(pgdir, va) {
         page_decref(<span class="kw-2">&amp;mut </span>pp);
         <span class="kw">unsafe </span>{ ptr::write(pte, <span class="number">0</span>) };

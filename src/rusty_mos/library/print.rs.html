@@ -71,37 +71,57 @@
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
 <a href="#73" id="73">73</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::arch_mipsel::machine::print_charc;
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Apply print-related functions.
+
+</span><span class="kw">use </span><span class="kw">crate</span>::arch_mipsel::machine::print_charc;
 
 <span class="kw">use </span>core::fmt::{<span class="self">self</span>, Write};
 
-<span class="kw">struct </span>Stdout;
+<span class="doccomment">/// An empty struct to hold the `fmt::Write` trait.
+</span><span class="kw">struct </span>Stdout;
 
 <span class="kw">impl </span>fmt::Write <span class="kw">for </span>Stdout {
-    <span class="kw">fn </span>write_str(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: <span class="kw-2">&amp;</span>str) -&gt; fmt::Result {
+    <span class="doccomment">/// Put strings onto the screen. See Also: [_write_str].
+    </span><span class="kw">fn </span>write_str(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: <span class="kw-2">&amp;</span>str) -&gt; fmt::Result {
         _write_str(s);
         <span class="prelude-val">Ok</span>(())
     }
 }
 
-<span class="kw">pub fn </span>_print(args: fmt::Arguments) {
+<span class="doccomment">/// Formatted print wrapper. See Also: [Stdout::write_fmt].
+</span><span class="kw">pub fn </span>_print(args: fmt::Arguments) {
     <span class="kw">let _ </span>= Stdout.write_fmt(args);
 }
 
-<span class="kw">pub fn </span>_write_str(s: <span class="kw-2">&amp;</span>str) {
+<span class="doccomment">/// Put the strings directly onto the screen. See Also: [print_charc].
+</span><span class="kw">fn </span>_write_str(s: <span class="kw-2">&amp;</span>str) {
     <span class="kw">for </span>c <span class="kw">in </span>s.chars() {
         print_charc(c <span class="kw">as </span>u8);
     }
 }
 
-<span class="attr">#[macro_export]
+<span class="doccomment">/// Formatted Print: with *no* *new-line* at the end.
+</span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> print {
     ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {{
         <span class="macro-nonterminal">$crate::library::print::_print</span>(<span class="macro">format_args!</span>($(<span class="macro-nonterminal">$arg</span>)<span class="kw-2">*</span>));
     }};
 }
 
-<span class="attr">#[macro_export]
+<span class="doccomment">/// Formatted Print: with a *new-line* at the end.
+</span><span class="attr">#[macro_export]
 </span><span class="macro">macro_rules!</span> println {
     () =&gt; {<span class="macro-nonterminal">$</span><span class="macro">crate::print!</span>(<span class="string">"\n"</span>)};
     ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {
@@ -110,7 +130,9 @@
     };
 }
 
-<span class="attr">#[<span class="macro-nonterminal">cfg</span>(debug_assertions)]
+<span class="doccomment">/// Debug Formatted Print: with a *new-line* at the end. Will perform nothing
+/// in *release* profile.
+</span><span class="attr">#[<span class="macro-nonterminal">cfg</span>(debug_assertions)]
 #[macro_export]
 </span><span class="macro">macro_rules!</span> debugln {
     () =&gt; {<span class="macro-nonterminal">$</span><span class="macro">crate::print!</span>(<span class="string">"\n"</span>)};
@@ -129,7 +151,9 @@
     ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {};
 }
 
-<span class="attr">#[cfg(debug_assertions)]
+<span class="doccomment">/// Debug Formatted Print: with *no* *new-line* at the end. Will perform nothing
+/// in *release* profile.
+</span><span class="attr">#[cfg(debug_assertions)]
 #[macro_export]
 </span><span class="macro">macro_rules!</span> debug {
     ($(<span class="macro-nonterminal">$arg</span>:tt)<span class="kw-2">*</span>) =&gt; {

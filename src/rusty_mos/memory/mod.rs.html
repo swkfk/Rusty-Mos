@@ -4,7 +4,13 @@
 <a href="#4" id="4">4</a>
 <a href="#5" id="5">5</a>
 <a href="#6" id="6">6</a>
-</pre></div><pre class="rust"><code><span class="kw">pub mod </span>buddy_allocator;
+<a href="#7" id="7">7</a>
+<a href="#8" id="8">8</a>
+<a href="#9" id="9">9</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Memory management. Including the page-memory model and the TLB related
+//! handlers. A global allocator will be provided as well.
+
+</span><span class="kw">pub mod </span>buddy_allocator;
 <span class="kw">pub mod </span>marcos;
 <span class="kw">pub mod </span>pmap;
 <span class="kw">pub mod </span>regions;

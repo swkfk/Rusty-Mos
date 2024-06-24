@@ -145,7 +145,61 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>core::{
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Global allocator use the buddy system.
+//!
+//! The *category* count can be specified via a const generic. The smallest
+//! alloc unit is one page while the largest is (2 ^ (category - 1)) pages.
+//!
+//! This allocator can be used after the page-memory manager is initilized.
+
+</span><span class="kw">use </span>core::{
     alloc::GlobalAlloc,
     cmp::{max, min},
     mem,
@@ -161,28 +215,41 @@
     PADDR,
 };
 
-<span class="kw">struct </span>BuddyInner&lt;<span class="kw">const </span>CCOUNT: usize&gt; {
-    free_list: [PageList; CCOUNT],
-    page_start: <span class="kw-2">*mut </span>PageNode,
+<span class="doccomment">/// The buddy system core data structure.
+</span><span class="kw">struct </span>BuddyInner&lt;<span class="kw">const </span>CCOUNT: usize&gt; {
+    <span class="doccomment">/// Free page lists. Only the first page will be in the list.
+    ///
+    /// The `i`-th category holds (2^i) pages each.
+    </span>free_list: [PageList; CCOUNT],
+    <span class="doccomment">/// The start page address used in the system.
+    </span>page_start: <span class="kw-2">*mut </span>PageNode,
 }
 
-<span class="kw">unsafe impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; Send <span class="kw">for </span>BuddyInner&lt;CCOUNT&gt; {}
+<span class="doccomment">/// For it can be used globally.
+</span><span class="kw">unsafe impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; Send <span class="kw">for </span>BuddyInner&lt;CCOUNT&gt; {}
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; Default <span class="kw">for </span>BuddyInner&lt;CCOUNT&gt; {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Default constructions.
+    </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new()
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; BuddyInner&lt;CCOUNT&gt; {
-    <span class="kw">const fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Create a brand-new buddy contents.
+    </span><span class="kw">const fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             free_list: [PageList::new(); CCOUNT],
             page_start: null_mut(),
         }
     }
 
-    <span class="kw">fn </span>init(<span class="kw-2">&amp;mut </span><span class="self">self</span>, page_start: <span class="kw-2">*mut </span>PageNode, size: usize) {
+    <span class="doccomment">/// Initialize the free list. The pages will be inserted into the topest
+    /// category and the remained into one-level-lower category. As to the
+    /// category *zero*.
+    ///
+    /// Only after this function invoked, the system can be used.
+    </span><span class="kw">fn </span>init(<span class="kw-2">&amp;mut </span><span class="self">self</span>, page_start: <span class="kw-2">*mut </span>PageNode, size: usize) {
         <span class="self">self</span>.page_start = page_start;
         <span class="kw">let </span>page_count = size / PAGE_SIZE;
         <span class="kw">let </span><span class="kw-2">mut </span>index = <span class="number">0</span>;
@@ -196,7 +263,17 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; BuddyInner&lt;CCOUNT&gt; {
-    <span class="kw">fn </span>alloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layout: core::alloc::Layout) -&gt; <span class="kw-2">*mut </span>u8 {
+    <span class="doccomment">/// Buddy Alloc.
+    ///
+    /// This method will search the specified category's free list first. If
+    /// found, the page will be returned.
+    ///
+    /// Otherwise, this method will search the higher category, until a free
+    /// item was found. In this situation, the pages will be splitted and
+    /// inserted into the lower category's free list one by one.
+    ///
+    /// If no pages can be found, a *null* pointer will be returned.
+    </span><span class="kw">fn </span>alloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, layout: core::alloc::Layout) -&gt; <span class="kw-2">*mut </span>u8 {
         <span class="kw">let </span>page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
         <span class="kw">let </span>page_count = max(page_count, <span class="number">1</span>);
         <span class="kw">let </span>category = page_count.trailing_zeros() <span class="kw">as </span>usize;
@@ -230,7 +307,18 @@
         null_mut()
     }
 
-    <span class="kw">fn </span>dealloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, layout: core::alloc::Layout) {
+    <span class="doccomment">/// Buddy Dealloc.
+    ///
+    /// The page will be inserted into its category's free list if no buddy is
+    /// found.
+    ///
+    /// Otherwise, the buddy will be removed from the free list. They will
+    /// be merged into a larger item and be inserted into one-level-higher
+    /// category.
+    ///
+    /// The process above will be performed recursively unless reached the
+    /// toppest category.
+    </span><span class="kw">fn </span>dealloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, layout: core::alloc::Layout) {
         <span class="kw">let </span>p = <span class="macro">pa2page!</span>(<span class="macro">PADDR!</span>(ptr <span class="kw">as </span>usize), <span class="kw-2">*</span>PAGES.borrow(); PageNode);
         <span class="kw">let </span><span class="kw-2">mut </span>page_index = (p - <span class="self">self</span>.page_start <span class="kw">as </span>usize) / mem::size_of::&lt;PageNode&gt;();
         <span class="kw">let </span>page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
@@ -265,30 +353,36 @@
     }
 }
 
-<span class="kw">pub struct </span>BuddyAllocator&lt;<span class="kw">const </span>CCOUNT: usize&gt;(SyncImplRef&lt;BuddyInner&lt;CCOUNT&gt;&gt;);
+<span class="doccomment">/// The *real* allocator provided to the Rust. A wrapper.
+</span><span class="kw">pub struct </span>BuddyAllocator&lt;<span class="kw">const </span>CCOUNT: usize&gt;(SyncImplRef&lt;BuddyInner&lt;CCOUNT&gt;&gt;);
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; Default <span class="kw">for </span>BuddyAllocator&lt;CCOUNT&gt; {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Default constructions.
+    </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new()
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; BuddyAllocator&lt;CCOUNT&gt; {
-    <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Just build a inner struct.
+    </span><span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>(SyncImplRef::new(BuddyInner::&lt;CCOUNT&gt;::new()))
     }
 
-    <span class="kw">pub fn </span>init(<span class="kw-2">&amp;</span><span class="self">self</span>, page_start: <span class="kw-2">*mut </span>PageNode, size: usize) {
+    <span class="doccomment">/// Just initialize the inner struct.
+    </span><span class="kw">pub fn </span>init(<span class="kw-2">&amp;</span><span class="self">self</span>, page_start: <span class="kw-2">*mut </span>PageNode, size: usize) {
         <span class="self">self</span>.<span class="number">0</span>.borrow_mut().init(page_start, size)
     }
 }
 
 <span class="kw">unsafe impl</span>&lt;<span class="kw">const </span>CCOUNT: usize&gt; GlobalAlloc <span class="kw">for </span>BuddyAllocator&lt;CCOUNT&gt; {
-    <span class="kw">unsafe fn </span>alloc(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: core::alloc::Layout) -&gt; <span class="kw-2">*mut </span>u8 {
+    <span class="doccomment">/// Do alloc.
+    </span><span class="kw">unsafe fn </span>alloc(<span class="kw-2">&amp;</span><span class="self">self</span>, layout: core::alloc::Layout) -&gt; <span class="kw-2">*mut </span>u8 {
         <span class="self">self</span>.<span class="number">0</span>.borrow_mut().alloc(layout)
     }
 
-    <span class="kw">unsafe fn </span>dealloc(<span class="kw-2">&amp;</span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, layout: core::alloc::Layout) {
+    <span class="doccomment">/// Do dealloc.
+    </span><span class="kw">unsafe fn </span>dealloc(<span class="kw-2">&amp;</span><span class="self">self</span>, ptr: <span class="kw-2">*mut </span>u8, layout: core::alloc::Layout) {
         <span class="self">self</span>.<span class="number">0</span>.borrow_mut().dealloc(ptr, layout)
     }
 }
