@@ -66,10 +66,9 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
                 continue;
             }
             let allocated = self.free_list[i].pop_head().unwrap();
-            let mut page = allocated as *mut PageNode;
-            for j in category..=i {
-                page = page.wrapping_add(1 << j);
-                self.free_list[j].insert_head(page);
+            let page = allocated as *mut PageNode;
+            for j in category..i {
+                self.free_list[j].insert_head(page.wrapping_add(1 << j));
             }
             let kva = page2kva!(allocated, *PAGES.borrow(); PageNode);
             debugln!(
