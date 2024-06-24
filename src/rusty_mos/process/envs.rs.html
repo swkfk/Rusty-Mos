@@ -532,6 +532,13 @@
 <a href="#532" id="532">532</a>
 <a href="#533" id="533">533</a>
 <a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Core methods for the env module.
 
 </span><span class="kw">use </span>core::{
@@ -553,11 +560,14 @@
             KSTACKTOP, NASID, PAGE_SIZE, PDSHIFT, PGSHIFT, PTE_G, PTE_V, UENVS, UPAGES, USTACKTOP,
             UTOP, UVPT,
         },
+        shared_pool::MEMORY_POOL,
         tlbex::tlb_invalidate,
     },
     pa2page, page2kva, println,
-    process::elf_loader::{elf_load_seg, Elf32Ehdr, Elf32Phdr, PT_LOAD},
-    process::scheduler::schedule,
+    process::{
+        elf_loader::{elf_load_seg, Elf32Ehdr, Elf32Phdr, PT_LOAD},
+        scheduler::schedule,
+    },
     utils::{
         array_based_list::{Aligned, ArrayLinkedList},
         sync_ref_cell::SyncImplRef <span class="kw">as </span>SyncRef,
@@ -913,6 +923,10 @@
         ENV_SCHE_LIST.borrow_mut().remove(env_index);
     }
     ENV_FREE_LIST.borrow_mut().insert_head(env_index);
+
+    MEMORY_POOL
+        .borrow_mut()
+        .destory_env(ENVS_DATA.borrow().<span class="number">0</span>[env_index].id <span class="kw">as </span>usize);
 }
 
 <span class="doccomment">/// Destory an env and free it. Re-schedule will be performed.

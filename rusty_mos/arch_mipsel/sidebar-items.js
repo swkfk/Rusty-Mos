@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["machine","syscall","syscall_impl","trap"]};
+window.SIDEBAR_ITEMS = {"mod":["machine","panic","syscall","syscall_impl","trap"]};

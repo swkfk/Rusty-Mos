@@ -702,6 +702,11 @@
 <a href="#702" id="702">702</a>
 <a href="#703" id="703">703</a>
 <a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Syscall implementations.
 
 </span><span class="kw">use </span>core::{
@@ -962,6 +967,11 @@
     <span class="kw">let </span>e = e.unwrap();
 
     <span class="kw">let </span><span class="kw-2">mut </span>env_data = ENVS_DATA.borrow_mut();
+
+    MEMORY_POOL
+        .borrow_mut()
+        .fork_bind(env_data.<span class="number">0</span>[e].id <span class="kw">as </span>usize, env_data.<span class="number">0</span>[e].parent_id <span class="kw">as </span>usize);
+
     env_data.<span class="number">0</span>[e].trap_frame = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>((KSTACKTOP <span class="kw">as </span><span class="kw-2">*mut </span>TrapFrame).sub(<span class="number">1</span>)) };
     env_data.<span class="number">0</span>[e].trap_frame.regs[<span class="number">2</span>] = <span class="number">0</span>;
     env_data.<span class="number">0</span>[e].status = EnvStatus::NotRunnable;
@@ -1285,10 +1295,10 @@
         }
     }
 
-    <span class="kw">if let </span><span class="prelude-val">Err</span>(r) = MEMORY_POOL
-        .borrow_mut()
-        .bind(pool_id, CUR_ENV_IDX.load(SeqCst))
-    {
+    <span class="kw">if let </span><span class="prelude-val">Err</span>(r) = MEMORY_POOL.borrow_mut().bind(
+        pool_id,
+        ENVS_DATA.borrow().<span class="number">0</span>[CUR_ENV_IDX.load(SeqCst)].id <span class="kw">as </span>usize,
+    ) {
         <span class="kw">return </span>r.into();
     }
 

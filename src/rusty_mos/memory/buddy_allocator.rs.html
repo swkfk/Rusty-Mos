@@ -145,7 +145,6 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>core::{
     alloc::GlobalAlloc,
     cmp::{max, min},
@@ -214,10 +213,9 @@
                 <span class="kw">continue</span>;
             }
             <span class="kw">let </span>allocated = <span class="self">self</span>.free_list[i].pop_head().unwrap();
-            <span class="kw">let </span><span class="kw-2">mut </span>page = allocated <span class="kw">as </span><span class="kw-2">*mut </span>PageNode;
-            <span class="kw">for </span>j <span class="kw">in </span>category..=i {
-                page = page.wrapping_add(<span class="number">1 </span>&lt;&lt; j);
-                <span class="self">self</span>.free_list[j].insert_head(page);
+            <span class="kw">let </span>page = allocated <span class="kw">as </span><span class="kw-2">*mut </span>PageNode;
+            <span class="kw">for </span>j <span class="kw">in </span>category..i {
+                <span class="self">self</span>.free_list[j].insert_head(page.wrapping_add(<span class="number">1 </span>&lt;&lt; j));
             }
             <span class="kw">let </span>kva = <span class="macro">page2kva!</span>(allocated, <span class="kw-2">*</span>PAGES.borrow(); PageNode);
             <span class="macro">debugln!</span>(
