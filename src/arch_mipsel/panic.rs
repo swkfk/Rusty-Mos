@@ -16,7 +16,7 @@ use super::machine::halt;
 /// and halting the system.
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("\x1b[31mKernel Panic!");
+    println!("\x1b[31mOops! The kernel panics >w<");
     let mut x: u32;
     unsafe { asm!("move {}, $29", out(reg) x) };
     print!("  \x1b[31m$sp:    \x1b[32m0x{:08x}", x);
