@@ -404,7 +404,7 @@ pub fn env_destory(env_index: usize) {
 }
 
 /// Get the env's PCB by its id. If `checkperm` is set, the method will check
-/// whether the env just is [CUR_ENV] or the child of CUR_ENV. If not,
+/// whether the env just is the *current* env or the child of it. If not,
 /// [KError::BadEnv] will be returned with a `Err` wrapper.
 ///
 /// # Safety
@@ -502,13 +502,7 @@ extern "C" {
     pub fn env_pop_tf(_1: *const TrapFrame, _2: u32) -> !;
 }
 
-// / Run before the `env_run` for **tests** only
-// pub static mut PRE_ENV_RUN: fn(*mut EnvNode) = |_| {};
-
-/// Run the env. Save the [CUR_ENV]'s trapframe if `CUR_ENV` exists.
-///
-/// # Safety
-/// The `env` **SHALL** be valid and runnable.
+/// Run the env. Save the *current* env's trapframe if it exists.
 pub fn env_run(env_index: usize) -> ! {
     let mut env_data = ENVS_DATA.borrow_mut();
     assert_eq!(

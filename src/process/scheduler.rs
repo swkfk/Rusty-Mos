@@ -14,8 +14,7 @@ static ENV_REST_COUNT: AtomicU32 = AtomicU32::new(0);
 /// run out, the next env will be selected.
 ///
 /// # Return
-/// The function is a *no-return* function.
-/// [env_run](rusty_mos::kern::env::env_run) will run the selected env.
+/// The function is a *no-return* function. [env_run] will run the selected env.
 ///
 /// # Panic
 ///

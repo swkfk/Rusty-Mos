@@ -203,8 +203,6 @@ impl MemoryPool {
     }
 
     /// Lock the pool with `poolid`, and the locker will be `envid`.
-    ///
-    /// See Also: [crate::memory::shared_pool::MemoryPoolEntry::lock]
     pub fn lock(&mut self, poolid: usize, envid: usize) -> Result<bool, KError> {
         match self.pools.get_mut(&poolid) {
             None => Err(KError::PoolNotFound),
@@ -213,8 +211,6 @@ impl MemoryPool {
     }
 
     /// Unlock the pool with `poolid`, and the locker will be `envid`.
-    ///
-    /// See Also: [crate::memory::shared_pool::MemoryPoolEntry::unlock]
     pub fn unlock(&mut self, poolid: usize, envid: usize) -> Result<(), KError> {
         match self.pools.get_mut(&poolid) {
             None => Err(KError::PoolNotFound),

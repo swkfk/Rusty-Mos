@@ -58,8 +58,7 @@ pub const KSTACKTOP: usize = ULIM + PDMAP;
 /// The high-limits of user's memory
 pub const ULIM: usize = 0x80000000;
 
-/// User's page tables are stored here (for a [PDMAP](crate::kdef::mmu::PDMAP)
-/// size).
+/// User's page tables are stored here (for a [PDMAP] size).
 pub const UVPT: usize = ULIM - PDMAP;
 /// The kernel array `PAGES` will be mapped here.
 pub const UPAGES: usize = UVPT - PDMAP;
@@ -67,8 +66,7 @@ pub const UPAGES: usize = UVPT - PDMAP;
 pub const UENVS: usize = UPAGES - PDMAP;
 /// The uer's space higher boundary.
 pub const UTOP: usize = UENVS;
-/// The exception stack top for the user. See also:
-/// [UTOP](crate::kdef::mmu::UTOP)
+/// The exception stack top for the user. See also: [UTOP].
 pub const UXSTACKTOP: usize = UTOP;
 /// Normal user stack top.
 pub const USTACKTOP: usize = UTOP - 2 * PTMAP;

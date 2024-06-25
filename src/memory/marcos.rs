@@ -28,7 +28,7 @@ macro_rules! page2kva {
 
 /// Get the page object of the phisical address.
 ///
-/// See also: [page2pa](crate::page2pa)
+/// See also: [page2pa]
 #[macro_export]
 macro_rules! pa2page {
     ($pa:expr, $pages:expr; $t:ty) => {{
@@ -79,7 +79,7 @@ macro_rules! PADDR {
 
 /// Get the virtual address (in **kernel segment**) from the physical address
 ///
-/// Someway the opposite of [PADDR](crate::PADDR)
+/// Someway the opposite of [PADDR]
 ///
 /// # Panic
 /// **NOT IMPLEMENTED**
@@ -113,7 +113,7 @@ macro_rules! PDX {
 
 /// Get the **Page Table Offset** from the virtual address
 ///
-/// See also: [PDX](crate::PDX)
+/// See also: [PDX]
 #[macro_export]
 macro_rules! PTX {
     ($va: expr) => {{

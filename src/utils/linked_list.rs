@@ -26,7 +26,7 @@ pub struct LinkList<T: Copy> {
 
 /// The node struct of the LinkList
 ///
-/// See also: [LinkList], [TailLinkList]
+/// See also: [LinkList]
 ///
 /// # Generics
 /// The type `T` indicates the data stored in the link list.
