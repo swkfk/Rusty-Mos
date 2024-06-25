@@ -69,7 +69,7 @@
 /// and halting the system.
 </span><span class="attr">#[panic_handler]
 </span><span class="kw">fn </span>panic(info: <span class="kw-2">&amp;</span>PanicInfo) -&gt; ! {
-    <span class="macro">println!</span>(<span class="string">"\x1b[31mKernel Panic!"</span>);
+    <span class="macro">println!</span>(<span class="string">"\x1b[31mOops! The kernel panics &gt;w&lt;"</span>);
     <span class="kw">let </span><span class="kw-2">mut </span>x: u32;
     <span class="kw">unsafe </span>{ <span class="macro">asm!</span>(<span class="string">"move {}, $29"</span>, out(reg) x) };
     <span class="macro">print!</span>(<span class="string">"  \x1b[31m$sp:    \x1b[32m0x{:08x}"</span>, x);

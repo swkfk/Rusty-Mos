@@ -19,17 +19,6 @@
 <a href="#19" id="19">19</a>
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
-<a href="#22" id="22">22</a>
-<a href="#23" id="23">23</a>
-<a href="#24" id="24">24</a>
-<a href="#25" id="25">25</a>
-<a href="#26" id="26">26</a>
-<a href="#27" id="27">27</a>
-<a href="#28" id="28">28</a>
-<a href="#29" id="29">29</a>
-<a href="#30" id="30">30</a>
-<a href="#31" id="31">31</a>
-<a href="#32" id="32">32</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Definition of some misc macros about type and offset.
 
 /// Round-up to the specified fractor.
@@ -50,16 +39,5 @@
     (<span class="macro-nonterminal">$x</span>: expr; <span class="macro-nonterminal">$n</span>: expr) =&gt; {
         <span class="macro-nonterminal">$x </span>&amp; !(<span class="macro-nonterminal">$n </span>- <span class="number">1</span>)
     };
-}
-
-<span class="doccomment">/// Get the array\[i\] via the raw pointer.
-///
-/// The `$i` is the index of the target element, starting from **zero**.
-/// The `$t` is the array elements' type.
-</span><span class="attr">#[macro_export]
-</span><span class="macro">macro_rules!</span> ARRAY_PTR {
-    (<span class="macro-nonterminal">$array</span>: expr; <span class="macro-nonterminal">$i</span>: expr, <span class="macro-nonterminal">$t</span>: ty) =&gt; {
-        ((<span class="macro-nonterminal">$array </span><span class="kw">as </span>usize) + <span class="macro-nonterminal">$i </span>* core::mem::size_of::&lt;<span class="macro-nonterminal">$t</span>&gt;()) <span class="kw">as </span><span class="kw-2">*mut </span><span class="macro-nonterminal">$t
-    </span>};
 }
 </code></pre></div></section></main></body></html>

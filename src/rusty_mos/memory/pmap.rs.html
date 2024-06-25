@@ -255,12 +255,6 @@
 <a href="#255" id="255">255</a>
 <a href="#256" id="256">256</a>
 <a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! The page-memory manager model of MOS. Core functions are provided here.
 
 </span><span class="kw">use </span>core::{mem::size_of, ptr};
@@ -271,7 +265,7 @@
     consts::error::KError,
     debugln,
     memory::regions::{PGSHIFT, PTE_C_CACHEABLE, PTE_V},
-    pa2page, page2kva, page2pa, println, ARRAY_PTR, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
+    pa2page, page2kva, page2pa, println, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
 
 <span class="kw">use </span><span class="kw">super</span>::tlbex::tlb_invalidate;
@@ -379,15 +373,15 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>page_id = <span class="number">0</span>;
     <span class="kw">while </span>page_id &lt; <span class="kw-2">*</span>NPAGE.borrow() &amp;&amp; page_id &lt;&lt; PGSHIFT &lt; <span class="macro">PADDR!</span>(<span class="kw-2">*</span>freemem) {
-        <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span><span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)).data).pp_ref = <span class="number">1 </span>};
+        <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span>pages.wrapping_add(page_id)).data).pp_ref = <span class="number">1 </span>};
         page_id += <span class="number">1</span>;
     }
 
     <span class="macro">debugln!</span>(<span class="string">"&gt; pmap.rs: pages are used for {}"</span>, page_id);
 
     <span class="kw">while </span>page_id &lt; <span class="kw-2">*</span>NPAGE.borrow() {
-        <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span><span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode)).data).pp_ref = <span class="number">0 </span>};
-        (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).insert_head(<span class="macro">ARRAY_PTR!</span>(pages; page_id, PageNode));
+        <span class="kw">unsafe </span>{ ((<span class="kw-2">*</span>pages.wrapping_add(page_id)).data).pp_ref = <span class="number">0 </span>};
+        (<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).insert_head(pages.wrapping_add(page_id));
         page_id += <span class="number">1</span>;
     }
 }
@@ -397,14 +391,11 @@
 </span><span class="kw">pub fn </span>page_alloc() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">*mut </span>PageNode, KError&gt; {
     <span class="kw">match </span>(<span class="kw-2">*</span>PAGE_FREE_LIST.borrow_mut()).pop_head() {
         <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(KError::NoMem),
-        <span class="prelude-val">Some</span>(pp) =&gt; <span class="kw">unsafe </span>{
-            ptr::write_bytes(
-                <span class="macro">page2kva!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u8,
-                <span class="number">0</span>,
-                PAGE_SIZE,
-            );
+        <span class="prelude-val">Some</span>(pp) =&gt; {
+            <span class="kw">let </span>entry_p = <span class="macro">page2kva!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>u8;
+            <span class="kw">unsafe </span>{ ptr::write_bytes(entry_p, <span class="number">0</span>, PAGE_SIZE) }
             <span class="prelude-val">Ok</span>(pp)
-        },
+        }
     }
 }
 
@@ -442,23 +433,19 @@
         <span class="comment">// Not Valid!
         </span><span class="kw">if </span>create {
             <span class="kw">let </span>pp = page_alloc()<span class="question-mark">?</span>;
+            <span class="kw">let </span>entry = (<span class="macro">PTE_ADDR!</span>(<span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode)) <span class="kw">as </span>Pte
+                | PTE_C_CACHEABLE
+                | PTE_V);
             <span class="kw">unsafe </span>{
-                ptr::write(
-                    pgdir_entryp,
-                    (<span class="macro">PTE_ADDR!</span>(<span class="macro">page2pa!</span>(pp, <span class="kw-2">*</span>PAGES.borrow(); PageNode)) <span class="kw">as </span>Pte
-                        | PTE_C_CACHEABLE
-                        | PTE_V),
-                );
+                ptr::write(pgdir_entryp, entry);
                 (<span class="kw-2">*</span>pp).data.pp_ref = <span class="number">1</span>;
             }
         } <span class="kw">else </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(ptr::null_mut());
         }
     }
-
-    <span class="kw">unsafe </span>{
-        <span class="prelude-val">Ok</span>((<span class="macro">KADDR!</span>(<span class="macro">PTE_ADDR!</span>(<span class="kw-2">*</span>pgdir_entryp)) + (<span class="macro">PTX!</span>(va) * size_of::&lt;Pte&gt;()) <span class="kw">as </span>u32) <span class="kw">as </span><span class="kw-2">*mut </span>Pte)
-    }
+    <span class="kw">let </span>entry = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>pgdir_entryp };
+    <span class="prelude-val">Ok</span>((<span class="macro">KADDR!</span>(<span class="macro">PTE_ADDR!</span>(entry)) + (<span class="macro">PTX!</span>(va) * size_of::&lt;Pte&gt;()) <span class="kw">as </span>u32) <span class="kw">as </span><span class="kw-2">*mut </span>Pte)
 }
 
 <span class="doccomment">/// Map the physical `page` to the virtual address `va`. The permission bits
@@ -505,10 +492,11 @@
 /// page table entry together if the page is found and is valid.
 </span><span class="kw">pub fn </span>page_lookup(pgdir: <span class="kw-2">*mut </span>Pde, va: usize) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">*mut </span>PageNode, <span class="kw-2">*mut </span>Pte)&gt; {
     <span class="kw">if let </span><span class="prelude-val">Ok</span>(pte) = pgdir_walk(pgdir, va, <span class="bool-val">false</span>) {
-        <span class="kw">if </span>pte.is_null() || <span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte &amp; PTE_V == <span class="number">0 </span>} {
+        <span class="kw">if </span>pte.is_null() || <span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte } &amp; PTE_V == <span class="number">0 </span>{
             <span class="prelude-val">None
         </span>} <span class="kw">else </span>{
-            <span class="kw">let </span>pp = <span class="kw">unsafe </span>{ <span class="macro">pa2page!</span>( <span class="kw-2">*</span>pte , <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>PageNode };
+            <span class="kw">let </span>entry = <span class="kw">unsafe </span>{ <span class="kw-2">*</span>pte };
+            <span class="kw">let </span>pp = <span class="macro">pa2page!</span>( entry , <span class="kw-2">*</span>PAGES.borrow(); PageNode) <span class="kw">as </span><span class="kw-2">*mut </span>PageNode;
             <span class="prelude-val">Some</span>((pp, pte))
         }
     } <span class="kw">else </span>{
