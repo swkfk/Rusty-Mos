@@ -8,6 +8,7 @@ use core::{arch::global_asm, include_str};
 use rusty_mos::kernel_tests::unit_test;
 
 use rusty_mos::{
+    arch_mipsel::trap::set_exc_base,
     debugln,
     memory::pmap::{mips_detect_memory, mips_vm_init, page_init},
     println,
@@ -45,6 +46,11 @@ pub extern "C" fn rust_mips_init(
     _penv: *const *const u8,
     ram_low_size: u32,
 ) {
+    extern "C" {
+        fn exc_handler();
+    }
+    set_exc_base(exc_handler as usize as u32);
+
     debugln!("> main.rs: rust_mips_init() has been called");
 
     println!("Rusty Mos, By kai_Ker");

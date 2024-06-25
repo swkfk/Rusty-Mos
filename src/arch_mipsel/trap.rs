@@ -1,5 +1,7 @@
 //! Handle exceptions(traps) and handler definitions.
 
+use core::arch::asm;
+
 use crate::println;
 
 /// Things need to be stored in the trapframe.
@@ -111,4 +113,10 @@ pub unsafe fn do_skip(trap_frame: *mut TrapFrame) {
         (*trap_frame).cp0_cause >> 2 & 0x1f
     );
     (*trap_frame).cp0_epc += 4;
+}
+
+/// Set the exception base entry.
+pub fn set_exc_base(exc_handler: u32) {
+    println!(">> Exc Entry: 0x{:x} <<", exc_handler);
+    unsafe { asm!("mtc0 {}, $15, 1", in(reg) exc_handler) };
 }

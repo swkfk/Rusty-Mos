@@ -16,19 +16,19 @@ PHDRS {
 
 SECTIONS {
 
-	. = 0x80000000;
+	. = 0x80020000;
+
+	exc_handler = . ;
+
 	.tlb_miss_entry : {
 		KEEP(*(.text.tlb_miss_entry))
 	} :exceptions
 
-	. = 0x80000180;
+	. = exc_handler + 0x0180;
+
 	.exc_gen_entry : {
 		KEEP(*(.text.exc_gen_entry))
 	} :exceptions
-
-	/* fill in the correct address of the key sections: text, data, bss. */
-
-	. = 0x80020000;
 
 	start = . ;
 
