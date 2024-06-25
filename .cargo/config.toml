@@ -1,6 +1,10 @@
 [build]
 target = "mipsel-unknown-none"
-rustflags = ["-C", "link-arg=-Tsrc/kernel.lds", "--check-cfg=cfg(mos_build)"]
+rustflags = [
+    "-C",
+    "link-arg=-Tsrc/kernel.lds",
+    "--check-cfg=cfg(mos_build, mos_test)",
+]
 
 [unstable]
 build-std = ["core", "compiler_builtins", "alloc"]
