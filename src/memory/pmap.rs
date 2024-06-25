@@ -8,7 +8,7 @@ use crate::{
     consts::error::KError,
     debugln,
     memory::regions::{PGSHIFT, PTE_C_CACHEABLE, PTE_V},
-    pa2page, page2kva, page2pa, println, ARRAY_PTR, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
+    pa2page, page2kva, page2pa, println, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
 };
 
 use super::tlbex::tlb_invalidate;
@@ -116,15 +116,15 @@ pub fn page_init(freemem: &mut usize) {
 
     let mut page_id = 0;
     while page_id < *NPAGE.borrow() && page_id << PGSHIFT < PADDR!(*freemem) {
-        unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 1 };
+        unsafe { ((*pages.wrapping_add(page_id)).data).pp_ref = 1 };
         page_id += 1;
     }
 
     debugln!("> pmap.rs: pages are used for {}", page_id);
 
     while page_id < *NPAGE.borrow() {
-        unsafe { ((*ARRAY_PTR!(pages; page_id, PageNode)).data).pp_ref = 0 };
-        (*PAGE_FREE_LIST.borrow_mut()).insert_head(ARRAY_PTR!(pages; page_id, PageNode));
+        unsafe { ((*pages.wrapping_add(page_id)).data).pp_ref = 0 };
+        (*PAGE_FREE_LIST.borrow_mut()).insert_head(pages.wrapping_add(page_id));
         page_id += 1;
     }
 }
@@ -134,14 +134,11 @@ pub fn page_init(freemem: &mut usize) {
 pub fn page_alloc() -> Result<*mut PageNode, KError> {
     match (*PAGE_FREE_LIST.borrow_mut()).pop_head() {
         None => Err(KError::NoMem),
-        Some(pp) => unsafe {
-            ptr::write_bytes(
-                page2kva!(pp, *PAGES.borrow(); PageNode) as *mut u8,
-                0,
-                PAGE_SIZE,
-            );
+        Some(pp) => {
+            let entry_p = page2kva!(pp, *PAGES.borrow(); PageNode) as *mut u8;
+            unsafe { ptr::write_bytes(entry_p, 0, PAGE_SIZE) }
             Ok(pp)
-        },
+        }
     }
 }
 
@@ -179,23 +176,19 @@ pub fn pgdir_walk(pgdir: *mut Pde, va: usize, create: bool) -> Result<*mut Pte, 
         // Not Valid!
         if create {
             let pp = page_alloc()?;
+            let entry = (PTE_ADDR!(page2pa!(pp, *PAGES.borrow(); PageNode)) as Pte
+                | PTE_C_CACHEABLE
+                | PTE_V);
             unsafe {
-                ptr::write(
-                    pgdir_entryp,
-                    (PTE_ADDR!(page2pa!(pp, *PAGES.borrow(); PageNode)) as Pte
-                        | PTE_C_CACHEABLE
-                        | PTE_V),
-                );
+                ptr::write(pgdir_entryp, entry);
                 (*pp).data.pp_ref = 1;
             }
         } else {
             return Ok(ptr::null_mut());
         }
     }
-
-    unsafe {
-        Ok((KADDR!(PTE_ADDR!(*pgdir_entryp)) + (PTX!(va) * size_of::<Pte>()) as u32) as *mut Pte)
-    }
+    let entry = unsafe { *pgdir_entryp };
+    Ok((KADDR!(PTE_ADDR!(entry)) + (PTX!(va) * size_of::<Pte>()) as u32) as *mut Pte)
 }
 
 /// Map the physical `page` to the virtual address `va`. The permission bits
@@ -242,10 +235,11 @@ pub fn page_insert(
 /// page table entry together if the page is found and is valid.
 pub fn page_lookup(pgdir: *mut Pde, va: usize) -> Option<(*mut PageNode, *mut Pte)> {
     if let Ok(pte) = pgdir_walk(pgdir, va, false) {
-        if pte.is_null() || unsafe { *pte & PTE_V == 0 } {
+        if pte.is_null() || unsafe { *pte } & PTE_V == 0 {
             None
         } else {
-            let pp = unsafe { pa2page!( *pte , *PAGES.borrow(); PageNode) as *mut PageNode };
+            let entry = unsafe { *pte };
+            let pp = pa2page!( entry , *PAGES.borrow(); PageNode) as *mut PageNode;
             Some((pp, pte))
         }
     } else {
