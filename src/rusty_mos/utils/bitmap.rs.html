@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils/bitmap.rs`."><title>bitmap.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (bcf94dec5 2024-06-23)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils/bitmap.rs`."><title>bitmap.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (6b0f4b5ec 2024-06-24)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -51,21 +51,65 @@
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
-</pre></div><pre class="rust"><code><span class="attr">#[derive(Debug)]
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Provide a bitmap and related opeartions.
+
+/// The bitmap itself. Contains the map and assistant field.
+///
+/// The `used` maintains the count of bit used to speed up the `empty` or
+/// `full` judgement.
+///
+/// The algorithm of searching the next empty bit is as follows:
+///
+/// We maintain a `pointer`, the search will from the `pointer` one-by-one.
+///
+/// # Generic
+///
+/// The const `CCOUNT` marks the count of bit maintains. The bitmap can hold
+/// (CCOUNT * 8) bits.
+</span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Bitmap&lt;<span class="kw">const </span>COUNT: usize&gt; {
-    bitmap: [u8; COUNT],
-    used: usize,
-    pointer: usize,
+    <span class="doccomment">/// The bitmap itself.
+    </span>bitmap: [u8; COUNT],
+    <span class="doccomment">/// Used bits count.
+    </span>used: usize,
+    <span class="doccomment">/// Search pointer.
+    </span>pointer: usize,
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>COUNT: usize&gt; Default <span class="kw">for </span>Bitmap&lt;COUNT&gt; {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Default constructions.
+    </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new()
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>COUNT: usize&gt; Bitmap&lt;COUNT&gt; {
-    <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Create a new bitmap and initialize the field as *zero*.
+    </span><span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
         Bitmap {
             bitmap: [<span class="number">0</span>; COUNT],
             used: <span class="number">0</span>,
@@ -73,16 +117,19 @@
         }
     }
 
-    <span class="kw">pub fn </span>empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    <span class="doccomment">/// Judge whether the bitmap is empty.
+    </span><span class="kw">pub fn </span>empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.used == COUNT &lt;&lt; <span class="number">3
     </span>}
 
-    <span class="kw">pub fn </span>peek(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; bool {
+    <span class="doccomment">/// To see whether the `index` is *not* used.
+    </span><span class="kw">pub fn </span>peek(<span class="kw-2">&amp;</span><span class="self">self</span>, index: usize) -&gt; bool {
         <span class="macro">assert!</span>((<span class="number">0</span>..COUNT &lt;&lt; <span class="number">3</span>).contains(<span class="kw-2">&amp;</span>index), <span class="string">"Bitmap out of index"</span>);
         (<span class="self">self</span>.bitmap[index &gt;&gt; <span class="number">3</span>] &gt;&gt; (index &amp; <span class="number">0x7</span>)) &amp; <span class="number">1 </span>== <span class="number">0
     </span>}
 
-    <span class="kw">pub fn </span>alloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+    <span class="doccomment">/// Alloc a new bit if available. A `None` will be returned if no bit rest.
+    </span><span class="kw">pub fn </span>alloc(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
         <span class="kw">if </span><span class="self">self</span>.empty() {
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
@@ -98,7 +145,8 @@
         <span class="prelude-val">None
     </span>}
 
-    <span class="kw">pub fn </span>free(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: usize) {
+    <span class="doccomment">/// Free the specified bit. Double free is not allowed.
+    </span><span class="kw">pub fn </span>free(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: usize) {
         <span class="macro">assert!</span>(!<span class="self">self</span>.peek(index), <span class="string">"Bitmap double free"</span>);
         <span class="self">self</span>.bitmap[index &gt;&gt; <span class="number">3</span>] &amp;= !(<span class="number">1 </span>&lt;&lt; (index &amp; <span class="number">0x7</span>));
         <span class="self">self</span>.used -= <span class="number">1</span>;

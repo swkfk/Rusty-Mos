@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils/array_based_list.rs`."><title>array_based_list.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (bcf94dec5 2024-06-23)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils/array_based_list.rs`."><title>array_based_list.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="rusty_mos" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (6b0f4b5ec 2024-06-24)" data-channel="nightly" data-search-js="search-0fe7219eb170c82e.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -107,24 +107,79 @@
 <a href="#107" id="107">107</a>
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
-</pre></div><pre class="rust"><code><span class="attr">#[repr(align(<span class="number">4096</span>))]
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+</pre></div><pre class="rust"><code><span class="doccomment">//! Safe linked list managed by arrays.
+
+/// Aligned arraies wrapper.
+</span><span class="attr">#[repr(align(<span class="number">4096</span>))]
 </span><span class="kw">pub struct </span>Aligned&lt;T, <span class="kw">const </span>LEN: usize&gt;(<span class="kw">pub </span>[T; LEN]);
 
-<span class="attr">#[repr(C)]
+<span class="doccomment">/// The list itself. Maintain a head and tail and the node array.
+///
+/// # Generic
+///
+/// The const `LEN` means the node count. It should be specified at the compile
+/// time.
+///
+/// # Invariant
+///
+/// Both `head` and `tail` *shall* be `None` together or not be `None`
+/// together.
+///
+/// See Also: [ArrayLinkNode]
+</span><span class="attr">#[repr(C)]
 </span><span class="kw">pub struct </span>ArrayLinkedList&lt;<span class="kw">const </span>LEN: usize&gt; {
-    array: [ArrayLinkNode; LEN],
-    head: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-    tail: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    <span class="doccomment">/// The array storing the linking field of each nodes.
+    </span>array: [ArrayLinkNode; LEN],
+    <span class="doccomment">/// The index of the first node. `None` means an empty node.
+    </span>head: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    <span class="doccomment">/// The index of the last node. `None` means an empty node.
+    </span>tail: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>LEN: usize&gt; Default <span class="kw">for </span>ArrayLinkedList&lt;LEN&gt; {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Default constructions.
+    </span><span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::new()
     }
 }
 
 <span class="kw">impl</span>&lt;<span class="kw">const </span>LEN: usize&gt; ArrayLinkedList&lt;LEN&gt; {
-    <span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
+    <span class="doccomment">/// Create a new link list and initialize the array.
+    </span><span class="kw">pub const fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             array: [ArrayLinkNode::new(); LEN],
             head: <span class="prelude-val">None</span>,
@@ -132,11 +187,13 @@
         }
     }
 
-    <span class="kw">pub fn </span>empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+    <span class="doccomment">/// Judge whether the list is empty.
+    </span><span class="kw">pub fn </span>empty(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.head.is_none()
     }
 
-    <span class="kw">pub fn </span>insert_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: usize) {
+    <span class="doccomment">/// Insert the index `item` node into the head.
+    </span><span class="kw">pub fn </span>insert_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: usize) {
         <span class="kw">match </span><span class="self">self</span>.head {
             <span class="prelude-val">None </span>=&gt; {
                 <span class="self">self</span>.head = <span class="prelude-val">Some</span>(item);
@@ -153,11 +210,14 @@
         }
     }
 
-    <span class="kw">pub fn </span>peek_head(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+    <span class="doccomment">/// Peek the first node.
+    </span><span class="kw">pub fn </span>peek_head(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
         <span class="self">self</span>.head
     }
 
-    <span class="kw">pub fn </span>pop_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+    <span class="doccomment">/// Get the first node. And remove it from the list if the list is not
+    /// empty.
+    </span><span class="kw">pub fn </span>pop_head(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
         <span class="kw">match </span><span class="self">self</span>.head {
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
             <span class="prelude-val">Some</span>(i) =&gt; {
@@ -167,7 +227,8 @@
         }
     }
 
-    <span class="kw">pub fn </span>insert_tail(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: usize) {
+    <span class="doccomment">/// Insert the index `item` node into the tail.
+    </span><span class="kw">pub fn </span>insert_tail(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: usize) {
         <span class="kw">if </span><span class="self">self</span>.head.is_none() {
             <span class="self">self</span>.insert_head(item);
             <span class="kw">return</span>;
@@ -178,7 +239,9 @@
         <span class="self">self</span>.tail = <span class="prelude-val">Some</span>(item);
     }
 
-    <span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: usize) {
+    <span class="doccomment">/// Remove the index `item` node from the list. This method requires that
+    /// the node was *in* the list.
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, item: usize) {
         <span class="kw">match </span><span class="self">self</span>.array[item].prev {
             <span class="prelude-val">None </span>=&gt; <span class="self">self</span>.head = <span class="self">self</span>.array[item].next,
             <span class="prelude-val">Some</span>(i) =&gt; <span class="self">self</span>.array[i].next = <span class="self">self</span>.array[item].next,
@@ -191,7 +254,8 @@
         <span class="self">self</span>.array[item].prev = <span class="prelude-val">None</span>;
     }
 
-    <span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, item: usize) -&gt; bool {
+    <span class="doccomment">/// Judge whether the node is in the list.
+    </span><span class="kw">pub fn </span>contains(<span class="kw-2">&amp;</span><span class="self">self</span>, item: usize) -&gt; bool {
         <span class="kw">if </span><span class="self">self</span>.array[item].prev.is_none()
             &amp;&amp; <span class="self">self</span>.array[item].next.is_none()
             &amp;&amp; (<span class="self">self</span>.head != <span class="prelude-val">Some</span>(item) || <span class="self">self</span>.tail != <span class="prelude-val">Some</span>(item))
@@ -202,14 +266,18 @@
     </span>}
 }
 
-<span class="attr">#[derive(Clone, Copy, Default, Debug)]
+<span class="doccomment">/// Linking field node. Contains a `next` and `prev` field.
+</span><span class="attr">#[derive(Clone, Copy, Default, Debug)]
 </span><span class="kw">pub struct </span>ArrayLinkNode {
-    <span class="kw">pub </span>next: <span class="prelude-ty">Option</span>&lt;usize&gt;,
-    <span class="kw">pub </span>prev: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    <span class="doccomment">/// Next node. If `None`, this node is the last node.
+    </span><span class="kw">pub </span>next: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+    <span class="doccomment">/// Previous node. If `None`, this node is the first node.
+    </span><span class="kw">pub </span>prev: <span class="prelude-ty">Option</span>&lt;usize&gt;,
 }
 
 <span class="kw">impl </span>ArrayLinkNode {
-    <span class="kw">pub const fn </span>new() -&gt; ArrayLinkNode {
+    <span class="doccomment">/// Default constructions.
+    </span><span class="kw">pub const fn </span>new() -&gt; ArrayLinkNode {
         ArrayLinkNode {
             prev: <span class="prelude-val">None</span>,
             next: <span class="prelude-val">None</span>,
