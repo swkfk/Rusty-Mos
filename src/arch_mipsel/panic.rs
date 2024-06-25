@@ -5,7 +5,7 @@ use core::{arch::asm, panic::PanicInfo, sync::atomic::Ordering::SeqCst};
 use crate::{
     memory::pmap::CUR_PGDIR,
     print, println,
-    process::envs::{CUR_ENV_IDX, ENVS_DATA},
+    process::envs::{CUR_ENV_IDX, ENVS_DATA, NENV},
 };
 
 use super::machine::halt;
@@ -30,15 +30,20 @@ fn panic(info: &PanicInfo) -> ! {
     print!("  \x1b[31mEPC:  \x1b[32m0x{:08x}", x);
     unsafe { asm!("mfc0 {}, $8", out(reg) x) };
     print!("  \x1b[31mBadAddr: \x1b[32m0x{:08x}\n", x);
-    print!("  \x1b[31mCurrent Env:\n");
+    print!("  \x1b[31mCurrent Env:");
     let env_index = CUR_ENV_IDX.load(SeqCst);
-    let env = &ENVS_DATA.borrow().0[env_index];
-    print!("    \x1b[31mIndex: \x1b[32m{}", env_index);
-    print!("  \x1b[31mId: \x1b[32m{} (0x{:x})", env.id, env.id);
-    print!(
-        "  \x1b[31mParent: \x1b[32m{} (0x{:x})\n",
-        env.parent_id, env.parent_id
-    );
+    if env_index == NENV {
+        println!(" \x1b[32mNot exist!");
+    } else {
+        println!();
+        let env = &ENVS_DATA.borrow().0[env_index];
+        print!("    \x1b[31mIndex: \x1b[32m{}", env_index);
+        print!("  \x1b[31mId: \x1b[32m{} (0x{:x})", env.id, env.id);
+        print!(
+            "  \x1b[31mParent: \x1b[32m{} (0x{:x})\n",
+            env.parent_id, env.parent_id
+        );
+    }
     println!(
         "  \x1b[31mCurrent Page Directory: \x1b[32m0x{:x}",
         *CUR_PGDIR.borrow() as usize
