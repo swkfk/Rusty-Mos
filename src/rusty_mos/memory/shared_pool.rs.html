@@ -229,6 +229,13 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Support the shared momeory pool. We can share more than one pages between
 //! envs.
 
@@ -373,6 +380,7 @@
                 <span class="kw">let </span>v = v.clone();
                 <span class="kw">for </span>pool <span class="kw">in </span>v.iter() {
                     <span class="self">self</span>.pools.get_mut(pool).unwrap().reference += <span class="number">1</span>;
+                    <span class="self">self</span>.pools.get_mut(pool).unwrap().envs.push(child_id);
                 }
                 <span class="self">self</span>.envs.insert(child_id, v);
             }
@@ -437,7 +445,13 @@
     </span><span class="kw">pub fn </span>lock(<span class="kw-2">&amp;mut </span><span class="self">self</span>, poolid: usize, envid: usize) -&gt; <span class="prelude-ty">Result</span>&lt;bool, KError&gt; {
         <span class="kw">match </span><span class="self">self</span>.pools.get_mut(<span class="kw-2">&amp;</span>poolid) {
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(KError::PoolNotFound),
-            <span class="prelude-val">Some</span>(pool) =&gt; <span class="prelude-val">Ok</span>(pool.lock(envid)),
+            <span class="prelude-val">Some</span>(pool) =&gt; {
+                <span class="kw">if </span>!pool.envs.contains(<span class="kw-2">&amp;</span>envid) {
+                    <span class="prelude-val">Err</span>(KError::PoolNotBind)
+                } <span class="kw">else </span>{
+                    <span class="prelude-val">Ok</span>(pool.lock(envid))
+                }
+            }
         }
     }
 

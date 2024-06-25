@@ -25,9 +25,15 @@
 <a href="#25" id="25">25</a>
 <a href="#26" id="26">26</a>
 <a href="#27" id="27">27</a>
+<a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::println;
 
+<span class="kw">mod </span>test_array_link_list;
 <span class="kw">mod </span>test_buddy_alloc;
+<span class="kw">mod </span>test_memory_pool;
 
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>slash_print(s: <span class="kw-2">&amp;</span>str) {
     <span class="macro">println!</span>(<span class="string">"===== \x1b[33m{}\x1b[0m ====="</span>, s);
@@ -51,5 +57,7 @@
 
 <span class="kw">pub fn </span>unit_test() {
     <span class="macro">TEST_CALL!</span>(test_buddy_alloc);
+    <span class="macro">TEST_CALL!</span>(test_array_link_list);
+    <span class="macro">TEST_CALL!</span>(test_memory_pool);
 }
 </code></pre></div></section></main></body></html>

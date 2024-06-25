@@ -186,14 +186,6 @@
 <a href="#186" id="186">186</a>
 <a href="#187" id="187">187</a>
 <a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-<a href="#193" id="193">193</a>
-<a href="#194" id="194">194</a>
-<a href="#195" id="195">195</a>
-<a href="#196" id="196">196</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Global allocator use the buddy system.
 //!
 //! The *category* count can be specified via a const generic. The smallest
@@ -280,13 +272,6 @@
             (max(layout.size(), layout.align()).div_ceil(PAGE_SIZE)).next_power_of_two();
         <span class="kw">let </span>page_count = max(page_count, <span class="number">1</span>);
         <span class="kw">let </span>category = page_count.trailing_zeros() <span class="kw">as </span>usize;
-        <span class="macro">debugln!</span>(
-            <span class="string">"&gt; ALLOC: alloc {} bytes with align {}, page needed is {} while the category is {}"</span>,
-            layout.size(),
-            layout.align(),
-            page_count,
-            category
-        );
 
         <span class="kw">for </span>i <span class="kw">in </span>category..CCOUNT {
             <span class="kw">if </span><span class="self">self</span>.free_list[i].empty() {
@@ -299,7 +284,8 @@
             }
             <span class="kw">let </span>kva = <span class="macro">page2kva!</span>(allocated, <span class="kw-2">*</span>PAGES.borrow(); PageNode);
             <span class="macro">debugln!</span>(
-                <span class="string">"&gt; ALLOC: allocated: page at 0x{:x}, kva at 0x{:x}, index: {}"</span>,
+                <span class="string">"&gt; ALLOC: allocated: {} bytes, page at 0x{:x}, kva at 0x{:x}, index: {}"</span>,
+                layout.size(),
                 allocated <span class="kw">as </span>usize,
                 kva,
                 (allocated <span class="kw">as </span>usize - <span class="self">self</span>.page_start <span class="kw">as </span>usize) / mem::size_of::&lt;PageNode&gt;()
@@ -343,15 +329,13 @@
                 <span class="kw">if </span>buddy == (list <span class="kw">as </span>usize - <span class="self">self</span>.page_start <span class="kw">as </span>usize) / mem::size_of::&lt;PageNode&gt;()
                 {
                     PageList::remove(<span class="self">self</span>.page_start.wrapping_add(buddy));
-                    <span class="macro">debugln!</span>(<span class="string">"&gt; FREE: remove page {}"</span>, buddy);
                     page_index = min(page_index, buddy);
                     <span class="kw">continue </span><span class="lifetime">'iter_cate</span>;
                 }
                 <span class="kw">unsafe </span>{ list = (<span class="kw-2">*</span>list).next };
             }
             <span class="comment">// Not find or reach the end
-            </span><span class="macro">debugln!</span>(<span class="string">"&gt; FREE: insert page {} into category {}"</span>, page_index, i);
-            <span class="self">self</span>.free_list[i].insert_head(<span class="self">self</span>.page_start.wrapping_add(page_index));
+            </span><span class="self">self</span>.free_list[i].insert_head(<span class="self">self</span>.page_start.wrapping_add(page_index));
             <span class="kw">break</span>;
         }
     }
