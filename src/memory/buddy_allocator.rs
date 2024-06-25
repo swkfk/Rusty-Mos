@@ -80,7 +80,8 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
     ///
     /// If no pages can be found, a *null* pointer will be returned.
     fn alloc(&mut self, layout: core::alloc::Layout) -> *mut u8 {
-        let page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
+        let page_count =
+            (max(layout.size(), layout.align()).div_ceil(PAGE_SIZE)).next_power_of_two();
         let page_count = max(page_count, 1);
         let category = page_count.trailing_zeros() as usize;
         debugln!(
@@ -127,7 +128,8 @@ impl<const CCOUNT: usize> BuddyInner<CCOUNT> {
     fn dealloc(&mut self, ptr: *mut u8, layout: core::alloc::Layout) {
         let p = pa2page!(PADDR!(ptr as usize), *PAGES.borrow(); PageNode);
         let mut page_index = (p - self.page_start as usize) / mem::size_of::<PageNode>();
-        let page_count = (max(layout.size(), layout.align()) / PAGE_SIZE).next_power_of_two();
+        let page_count =
+            (max(layout.size(), layout.align()).div_ceil(PAGE_SIZE)).next_power_of_two();
         let page_count = max(page_count, 1);
         let category = page_count.trailing_zeros() as usize;
         debugln!(
