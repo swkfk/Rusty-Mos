@@ -24,6 +24,8 @@ use core::ptr::addr_of;
 #[cfg(mos_build)]
 use rusty_mos::process::envs::env_create;
 
+/// Read the elf from '/target/user/{icode}' and load it. The priority can be
+/// set.
 #[cfg(mos_build)]
 macro_rules! ENV_CREATE {
     ($icode:expr, $prio:expr) => {
@@ -32,6 +34,7 @@ macro_rules! ENV_CREATE {
     };
 }
 
+/// Start function in rust. Call by the asm function `_start`.
 #[no_mangle]
 pub extern "C" fn rust_mips_init(
     _argc: u32,

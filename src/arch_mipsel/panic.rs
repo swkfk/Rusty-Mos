@@ -1,3 +1,5 @@
+//! Panic handlers.
+
 use core::{arch::asm, panic::PanicInfo, sync::atomic::Ordering::SeqCst};
 
 use crate::{

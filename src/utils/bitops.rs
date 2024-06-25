@@ -1,3 +1,5 @@
+//! Bit operations.
+
 /// Gen a mask from the $h-bit (MSB) to $l-bit (LSB) with 1.
 ///
 /// # Examples

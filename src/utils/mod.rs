@@ -1,3 +1,5 @@
+//! Kernel independent utils like link list or bit map.
+
 pub mod array_based_list;
 pub mod bitmap;
 pub mod bitops;
