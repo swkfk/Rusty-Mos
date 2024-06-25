@@ -21,6 +21,7 @@
 
 pub mod arch_mipsel;
 pub mod consts;
+pub mod kernel_tests;
 pub mod library;
 pub mod memory;
 pub mod process;

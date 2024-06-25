@@ -4,6 +4,9 @@
 
 use core::{arch::global_asm, include_str};
 
+#[cfg(mos_test)]
+use rusty_mos::kernel_tests::unit_test;
+
 use rusty_mos::{
     debugln,
     memory::pmap::{mips_detect_memory, mips_vm_init, page_init},
@@ -58,6 +61,9 @@ pub extern "C" fn rust_mips_init(
     page_init(&mut freemem);
 
     env_init();
+
+    #[cfg(mos_test)]
+    unit_test();
 
     #[cfg(mos_build)]
     ENV_CREATE!("icode.b", 1);

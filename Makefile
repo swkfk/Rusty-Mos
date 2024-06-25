@@ -29,7 +29,15 @@ CARGO_BUILD = $(CARGO) build $(CARGO_TARGET) $(CARGO_FLAG)
 
 .all: build
 
-.PHONY: build, clean, doc
+.PHONY: build, clean, doc, test
+
+test:
+	MOS_TEST=1 $(CARGO_BUILD)
+	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)
+
+dbg_test:
+	MOS_TEST=1 $(CARGO_BUILD)
+	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf) -s -S
 
 build:
 	MOS_USER=1 $(MAKE) --directory=mos_user
@@ -40,6 +48,9 @@ run: build
 
 dbg_run: build
 	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf) -s -S
+
+pts:
+	gdb-multiarch -q $(mos_elf) -ex "target remote localhost:1234"
 
 clean:
 	$(CARGO) clean
