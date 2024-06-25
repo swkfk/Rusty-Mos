@@ -142,6 +142,7 @@ impl MemoryPool {
                 let v = v.clone();
                 for pool in v.iter() {
                     self.pools.get_mut(pool).unwrap().reference += 1;
+                    self.pools.get_mut(pool).unwrap().envs.push(child_id);
                 }
                 self.envs.insert(child_id, v);
             }
@@ -206,7 +207,13 @@ impl MemoryPool {
     pub fn lock(&mut self, poolid: usize, envid: usize) -> Result<bool, KError> {
         match self.pools.get_mut(&poolid) {
             None => Err(KError::PoolNotFound),
-            Some(pool) => Ok(pool.lock(envid)),
+            Some(pool) => {
+                if !pool.envs.contains(&envid) {
+                    Err(KError::PoolNotBind)
+                } else {
+                    Ok(pool.lock(envid))
+                }
+            }
         }
     }
 
