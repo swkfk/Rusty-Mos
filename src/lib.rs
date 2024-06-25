@@ -5,10 +5,10 @@
 //! [kai_Ker](mailto:kai_Ker@buaa.edu.cn).
 //!
 //! The C-Version of MOS is developed and continuously improved by the OS
-//! course team. I express my sincere gratitude to the teachers and *S.A.R.T*s
+//! course team. I express my sincere gratitude to the teachers and *S.T.A.R*s
 //! who have continuously contributed to the MOS and to out course.
 //!
-//! Beyond the origin functions, this version os MOS also has a buddy system
+//! Beyond the origin functions, this version of MOS also has a buddy system
 //! allocator and a multi-pages shared memory pool.
 //!
 //! The MOS itself has the design concept of *microkernel*. The *fork* and the
