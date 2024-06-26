@@ -5,7 +5,7 @@
 //! [kai_Ker](mailto:kai_Ker@buaa.edu.cn).
 //!
 //! The C-Version of MOS is developed and continuously improved by the OS
-//! course team. I express my sincere gratitude to the teachers and *S.T.A.R*s
+//! course team. I express my sincere gratitude to the teachers and *S.T.A.R.*s
 //! who have continuously contributed to the MOS and to out course.
 //!
 //! Beyond the origin functions, this version of MOS also has a buddy system

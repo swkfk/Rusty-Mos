@@ -24,7 +24,7 @@ jobs:
         run: |
           rustup component add --toolchain nightly rust-src
       - name: Generate the Documents
-        run: cargo doc --target mipsel-unknown-none -Zbuild-std=core,alloc
+        run: cargo doc --target mipsel-unknown-none -Zbuild-std=core,alloc --document-private-items
       - name: Move the Documents
         run: mv target/mipsel-unknown-none/doc/ .
       - name: Deploy the Documents into GitHub Page

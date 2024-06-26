@@ -42,9 +42,9 @@ pub enum SyscallNo {
     /// Create a memory pool.
     SysCreatePool,
     /// Bind a memory pool.
-    SysFetchPool,
+    SysBindPool,
     /// Try to lock a memory pool.
-    SysTryLock,
+    SysLock,
     /// Unlock a memory pool.
     SysUnlock,
 }
