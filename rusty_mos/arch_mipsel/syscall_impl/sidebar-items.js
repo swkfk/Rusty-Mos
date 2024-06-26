@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["SYSCALL_TABLE"],"fn":["do_syscall"]};
+window.SIDEBAR_ITEMS = {"constant":["SYSCALL_TABLE"],"fn":["do_syscall","sys_bind_shared_pool","sys_cgetc","sys_create_shared_pool","sys_env_destroy","sys_exofork","sys_getenvid","sys_ipc_recv","sys_ipc_try_send","sys_lock","sys_mem_alloc","sys_mem_map","sys_mem_unmap","sys_panic","sys_print_cons","sys_putchar","sys_read_dev","sys_set_env_status","sys_set_tlb_mod_entry","sys_set_trapframe","sys_unlock","sys_write_dev","sys_yield"],"struct":["CLikeStr"],"type":["SyscallFn","SyscallRawPtr"]};

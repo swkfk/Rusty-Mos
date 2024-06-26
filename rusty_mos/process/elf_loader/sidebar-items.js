@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["PF_R","PF_W","PF_X","PT_LOAD"],"fn":["elf_load_seg"],"struct":["Elf32Ehdr","Elf32Phdr"],"type":["ElfMapperFn"]};
+window.SIDEBAR_ITEMS = {"constant":["EI_NIDNET","PF_R","PF_W","PF_X","PT_LOAD"],"fn":["elf_load_seg"],"struct":["Elf32Ehdr","Elf32Phdr"],"type":["Elf32Addr","Elf32Half","Elf32Off","Elf32Word","ElfMapperFn"]};

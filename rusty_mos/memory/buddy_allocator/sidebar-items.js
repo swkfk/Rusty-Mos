@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["BuddyAllocator"]};
+window.SIDEBAR_ITEMS = {"struct":["BuddyAllocator","BuddyInner"]};

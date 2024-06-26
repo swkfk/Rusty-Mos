@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["halt","print_charc","scan_charc"]};
+window.SIDEBAR_ITEMS = {"constant":["KSEG1","MALTA_FPGA_BASE","MALTA_PCIIO_BASE","MALTA_SERIAL_BASE","MALTA_SERIAL_DATA","MALTA_SERIAL_DATA_READY","MALTA_SERIAL_LSR","MALTA_SERIAL_THR_EMPTY"],"fn":["halt","print_charc","scan_charc"]};

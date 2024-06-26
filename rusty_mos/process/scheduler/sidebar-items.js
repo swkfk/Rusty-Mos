@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["schedule"]};
+window.SIDEBAR_ITEMS = {"fn":["schedule"],"static":["ENV_REST_COUNT"]};

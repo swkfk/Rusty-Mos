@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"static":["MEMORY_POOL"],"struct":["MemoryPool"]};
+window.SIDEBAR_ITEMS = {"fn":["mkpoolid"],"static":["MEMORY_POOL","POOL_I"],"struct":["MemoryPool","MemoryPoolEntry"]};

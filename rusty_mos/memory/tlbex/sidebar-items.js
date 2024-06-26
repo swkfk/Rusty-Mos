@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["_do_tlb_refill","do_tlb_mod","tlb_invalidate","tlb_out"]};
+window.SIDEBAR_ITEMS = {"fn":["_do_tlb_refill","do_tlb_mod","passive_alloc","tlb_invalidate","tlb_out"]};
