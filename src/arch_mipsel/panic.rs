@@ -18,10 +18,10 @@ use super::machine::halt;
 fn panic(info: &PanicInfo) -> ! {
     println!("\x1b[31mOops! The kernel panics >w<");
     let mut x: u32;
+    // unsafe { asm!("move {}, $31", out(reg) x) };
+    print!("  \x1b[31m$ra:    \x1b[32m0x????????");
     unsafe { asm!("move {}, $29", out(reg) x) };
-    print!("  \x1b[31m$sp:    \x1b[32m0x{:08x}", x);
-    unsafe { asm!("move {}, $31", out(reg) x) };
-    print!("  \x1b[31m$ra:  \x1b[32m0x{:08x}", x);
+    print!("  \x1b[31m$sp:  \x1b[32m0x{:08x}", x);
     unsafe { asm!("mfc0 {}, $12", out(reg) x) };
     print!("  \x1b[31mStatus:  \x1b[32m0x{:08x}\n", x);
     unsafe { asm!("mfc0 {}, $13", out(reg) x) };
