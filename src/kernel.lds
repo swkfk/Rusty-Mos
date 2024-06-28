@@ -18,21 +18,23 @@ SECTIONS {
 
 	. = 0x80020000;
 
+	start = . ;
+
+	.text : { *(.text.*) } :text
+
+	. = ALIGN(0x8000);
+
 	exc_handler = . ;
 
 	.tlb_miss_entry : {
-		KEEP(*(.text.tlb_miss_entry))
+		KEEP(*(.tlb_miss_entry))
 	} :exceptions
 
 	. = exc_handler + 0x0180;
 
 	.exc_gen_entry : {
-		KEEP(*(.text.exc_gen_entry))
+		KEEP(*(.exc_gen_entry))
 	} :exceptions
-
-	start = . ;
-
-	.text : { *(.text.*) } :text
 
 	.rodata : { *(.rodata.*) }
 

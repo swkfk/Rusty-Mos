@@ -1,8 +1,8 @@
-.section .text.tlb_miss_entry
+.section .tlb_miss_entry, "ax", %progbits
 tlb_miss_entry:
 	j       exc_gen_entry
 
-.section .text.exc_gen_entry
+.section .exc_gen_entry, "ax", %progbits
 exc_gen_entry:
 	SAVE_ALL tag_exc_gen_entry_no_sp
 	mfc0    $t0, CP0_STATUS
