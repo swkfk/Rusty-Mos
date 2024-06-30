@@ -31,7 +31,7 @@ use crate::{
         array_based_list::{Aligned, ArrayLinkedList},
         sync_ref_cell::SyncImplRef as SyncRef,
     },
-    ENVX, KADDR, PADDR, PDX, PTE_ADDR, PTX, ROUND,
+    ENVX, KADDR, PADDR, PDX, PTE_ADDR, ROUND,
 };
 
 /// The env status enum. Compatible with the C-Like memory structure.
@@ -350,7 +350,7 @@ pub fn env_free(env_index: usize) {
 
         let pa = unsafe { PTE_ADDR!(*(ENVS_DATA.borrow().0[env_index].pgdir.add(pdeno))) };
         let pt = KADDR!(pa) as *mut Pte;
-        for pteno in 0..PTX!(!0) {
+        for pteno in 0..PAGE_SIZE / size_of::<Pte>() {
             if unsafe { *(pt.add(pteno)) } & PTE_V != 0 {
                 page_remove(
                     ENVS_DATA.borrow().0[env_index].pgdir,
