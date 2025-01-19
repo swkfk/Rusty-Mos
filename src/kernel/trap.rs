@@ -98,7 +98,10 @@ pub static EXCEPTION_HANDLERS: [unsafe extern "C" fn(*const TrapFrame); 32] = [
 /// The `trap_frame` *shall* be a valid address.
 #[no_mangle]
 pub unsafe fn do_reserved(trap_frame: *const TrapFrame) {
-    panic!("Unknown ExcCode {:2}", (*trap_frame).cp0_cause >> 2 & 0x1f);
+    panic!(
+        "Unknown ExcCode {:2}",
+        ((*trap_frame).cp0_cause >> 2) & 0x1f
+    );
 }
 
 /// Skip the current instruction.
@@ -110,7 +113,7 @@ pub unsafe fn do_reserved(trap_frame: *const TrapFrame) {
 pub unsafe fn do_skip(trap_frame: *mut TrapFrame) {
     println!(
         "\x1b[31mExcCode {:2} detected. Skipped!\x1b[0m",
-        (*trap_frame).cp0_cause >> 2 & 0x1f
+        ((*trap_frame).cp0_cause >> 2) & 0x1f
     );
     (*trap_frame).cp0_epc += 4;
 }

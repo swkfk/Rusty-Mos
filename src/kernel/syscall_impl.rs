@@ -45,7 +45,7 @@ fn sys_putchar(ch: u8) {
 /// is above the [UTOP].
 fn sys_print_cons(s: *const u8, num: u32) -> u32 {
     let num = num as usize;
-    if s as usize + num > UTOP || s as usize > UTOP || s as usize > s as usize + num {
+    if s as usize + num > UTOP || s as usize > UTOP || (s as usize).checked_add(num).is_none() {
         return KError::Invalid.into();
     }
     for i in 0..num {
@@ -490,7 +490,6 @@ fn sys_cgetc() -> u8 {
 ///
 /// This syscall will return a negated-[KError::Invalid] if the `va` is out of
 /// the \[[UTEMP, UTOP]) range, or the `pa` is invalid or the `len` is invalid.
-
 fn sys_write_dev(va: u32, pa: u32, len: u32) -> u32 {
     let va = va as usize;
     let pa = pa as usize;
