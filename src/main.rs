@@ -8,20 +8,20 @@ use core::{arch::global_asm, include_str};
 use rusty_mos::kernel_tests::unit_test;
 
 use rusty_mos::{
-    arch_mipsel::trap::set_exc_base,
     debugln,
+    kernel::trap::set_exc_base,
     memory::pmap::{mips_detect_memory, mips_vm_init, page_init},
     println,
     process::{envs::env_init, scheduler::schedule},
 };
 
-global_asm!(include_str!("arch_mipsel/asm/include/inc.S"));
-global_asm!(include_str!("arch_mipsel/asm/tlb.S"));
-global_asm!(include_str!("start.S"));
-global_asm!(include_str!("arch_mipsel/asm/entry.S"));
-global_asm!(include_str!("arch_mipsel/asm/genex.S"));
-global_asm!(include_str!("arch_mipsel/asm/kclock.S"));
-global_asm!(include_str!("arch_mipsel/asm/env.S"));
+global_asm!(include_str!("arch/mipsel/asm/include/inc.S"));
+global_asm!(include_str!("arch/mipsel/asm/tlb.S"));
+global_asm!(include_str!("arch/mipsel/start.S"));
+global_asm!(include_str!("arch/mipsel/asm/entry.S"));
+global_asm!(include_str!("arch/mipsel/asm/genex.S"));
+global_asm!(include_str!("arch/mipsel/asm/kclock.S"));
+global_asm!(include_str!("arch/mipsel/asm/env.S"));
 
 #[cfg(mos_build)]
 use core::ptr::addr_of;

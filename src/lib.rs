@@ -19,8 +19,9 @@
 #![no_std]
 #![no_main]
 
-pub mod arch_mipsel;
+pub mod arch;
 pub mod consts;
+pub mod kernel;
 pub mod kernel_tests;
 pub mod library;
 pub mod memory;

@@ -10,3 +10,6 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
+
+[features]
+mipsel = []

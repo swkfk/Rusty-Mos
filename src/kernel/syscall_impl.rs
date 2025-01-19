@@ -20,11 +20,9 @@ use crate::{
     utils::io::{ioread_into_va, iowrite_from_va},
 };
 
-use super::{
-    machine::{print_charc, scan_charc},
-    syscall::MAX_SYS_NO,
-    trap::TrapFrame,
-};
+use crate::arch::machine::{print_charc, scan_charc};
+
+use super::{syscall::MAX_SYS_NO, trap::TrapFrame};
 
 use crate::process::scheduler::schedule;
 

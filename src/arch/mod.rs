@@ -1,7 +1,8 @@
 //! Things related to the architecture. **Mipsel** here is.
 
 pub mod machine;
-pub mod panic;
-pub mod syscall;
-pub mod syscall_impl;
-pub mod trap;
+
+mod mipsel;
+
+#[cfg(feature = "mipsel")]
+pub use mipsel::cp0reg;

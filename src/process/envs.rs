@@ -7,9 +7,10 @@ use core::{
 };
 
 use crate::{
-    arch_mipsel::trap::TrapFrame,
-    consts::{cp0reg::*, error::KError},
+    arch::cp0reg::*,
+    consts::error::KError,
     debugln,
+    kernel::trap::TrapFrame,
     memory::{
         pmap::{
             page_alloc, page_decref, page_insert, page_remove, PageNode, Pde, Pte, CUR_PGDIR,

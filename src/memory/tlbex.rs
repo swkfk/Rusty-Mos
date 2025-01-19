@@ -10,7 +10,7 @@ use core::sync::atomic::Ordering::SeqCst;
 
 use crate::memory::pmap::{page_alloc, page_insert, page_lookup, Pde, Pte, CUR_PGDIR};
 
-use crate::arch_mipsel::trap::TrapFrame;
+use crate::kernel::trap::TrapFrame;
 
 extern "C" {
     /// ASM-Functions. Clear the tlb entry.
