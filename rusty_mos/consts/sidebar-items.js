@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["cp0reg","error","types"]};
+window.SIDEBAR_ITEMS = {"mod":["error","types"]};
