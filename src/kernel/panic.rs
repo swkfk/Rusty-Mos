@@ -8,7 +8,7 @@ use crate::{
     process::envs::{CUR_ENV_IDX, ENVS_DATA, NENV},
 };
 
-use super::machine::halt;
+use crate::arch::machine::halt;
 
 /// Oops! The kernel panics >ω<
 ///

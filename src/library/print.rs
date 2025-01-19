@@ -1,6 +1,6 @@
 //! Apply print-related functions.
 
-use crate::arch_mipsel::machine::print_charc;
+use crate::arch::machine::print_charc;
 
 use core::fmt::{self, Write};
 

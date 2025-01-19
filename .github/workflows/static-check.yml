@@ -10,6 +10,9 @@ jobs:
   check:
     name: Cargo Check
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [mipsel]
     steps:
       - uses: actions/checkout@v4
       - name: Setup Rust Nightly ToolChain
@@ -25,6 +28,6 @@ jobs:
       - name: Format Check
         run: cargo fmt --all -- --check
       - name: Check with Cargo-Check
-        run: cargo check --target mipsel-unknown-none -Zbuild-std=core,alloc
+        run: cargo check --target mipsel-unknown-none -Zbuild-std=core,alloc --features ${{ matrix.arch }}
       - name: Check with Clippy
-        run: cargo clippy --target mipsel-unknown-none -Zbuild-std=core,alloc -- -D warnings
+        run: cargo clippy --target mipsel-unknown-none -Zbuild-std=core,alloc --features ${{ matrix.arch }} -- -D warnings
