@@ -531,10 +531,7 @@
 <a href="#530" id="530">530</a>
 <a href="#531" id="531">531</a>
 <a href="#532" id="532">532</a>
-<a href="#533" id="533">533</a>
-<a href="#534" id="534">534</a>
-<a href="#535" id="535">535</a>
-<a href="#536" id="536">536</a></pre></div><pre class="rust"><code><span class="doccomment">//! Core methods for the env module.
+<a href="#533" id="533">533</a></pre></div><pre class="rust"><code><span class="doccomment">//! Core methods for the env module.
 
 </span><span class="kw">use </span>core::{
     mem::size_of,
@@ -701,11 +698,8 @@
 /// program.
 </span><span class="kw">pub static </span>ENVS_DATA: SyncRef&lt;Aligned&lt;EnvData, NENV&gt;&gt; =
     SyncRef::new(Aligned([EnvData::new(); NENV]));
-<span class="doccomment">/// The envs array used in the *kernel* space. The element in it has the link
-/// field to make it a link node.
-</span><span class="comment">// pub static mut ENVS: EnvsWrapper&lt;EnvNode&gt; = EnvsWrapper([EnvNode::const_construct(); NENV]);
 
-</span><span class="doccomment">/// Bitmap for the asid allocatoin.
+<span class="doccomment">/// Bitmap for the asid allocatoin.
 </span><span class="kw">pub static </span>ASID_BMAP: SyncRef&lt;[u32; NASID <span class="kw">as </span>usize &gt;&gt; <span class="number">5</span>]&gt; = SyncRef::new([<span class="number">0</span>; NASID <span class="kw">as </span>usize &gt;&gt; <span class="number">5</span>]);
 
 <span class="doccomment">/// Alloc a new asid. Return an error if there is no asid remained.

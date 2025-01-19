@@ -763,8 +763,7 @@
 <a href="#762" id="762">762</a>
 <a href="#763" id="763">763</a>
 <a href="#764" id="764">764</a>
-<a href="#765" id="765">765</a>
-<a href="#766" id="766">766</a></pre></div><pre class="rust"><code><span class="doccomment">//! Syscall implementations.
+<a href="#765" id="765">765</a></pre></div><pre class="rust"><code><span class="doccomment">//! Syscall implementations.
 
 </span><span class="kw">use </span>core::{
     fmt::{Display, Write},
@@ -811,7 +810,7 @@
 /// is above the [UTOP].
 </span><span class="kw">fn </span>sys_print_cons(s: <span class="kw-2">*const </span>u8, num: u32) -&gt; u32 {
     <span class="kw">let </span>num = num <span class="kw">as </span>usize;
-    <span class="kw">if </span>s <span class="kw">as </span>usize + num &gt; UTOP || s <span class="kw">as </span>usize &gt; UTOP || s <span class="kw">as </span>usize &gt; s <span class="kw">as </span>usize + num {
+    <span class="kw">if </span>s <span class="kw">as </span>usize + num &gt; UTOP || s <span class="kw">as </span>usize &gt; UTOP || (s <span class="kw">as </span>usize).checked_add(num).is_none() {
         <span class="kw">return </span>KError::Invalid.into();
     }
     <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num {
@@ -1256,7 +1255,6 @@
 ///
 /// This syscall will return a negated-[KError::Invalid] if the `va` is out of
 /// the \[[UTEMP, UTOP]) range, or the `pa` is invalid or the `len` is invalid.
-
 </span><span class="kw">fn </span>sys_write_dev(va: u32, pa: u32, len: u32) -&gt; u32 {
     <span class="kw">let </span>va = va <span class="kw">as </span>usize;
     <span class="kw">let </span>pa = pa <span class="kw">as </span>usize;
