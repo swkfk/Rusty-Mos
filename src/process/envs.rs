@@ -165,9 +165,6 @@ pub static ENV_SCHE_LIST: SyncRef<ArrayLinkedList<NENV>> = SyncRef::new(ArrayLin
 /// program.
 pub static ENVS_DATA: SyncRef<Aligned<EnvData, NENV>> =
     SyncRef::new(Aligned([EnvData::new(); NENV]));
-/// The envs array used in the *kernel* space. The element in it has the link
-/// field to make it a link node.
-// pub static mut ENVS: EnvsWrapper<EnvNode> = EnvsWrapper([EnvNode::const_construct(); NENV]);
 
 /// Bitmap for the asid allocatoin.
 pub static ASID_BMAP: SyncRef<[u32; NASID as usize >> 5]> = SyncRef::new([0; NASID as usize >> 5]);
