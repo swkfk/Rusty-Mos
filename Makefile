@@ -1,14 +1,19 @@
 ARCH                    ?= mipsel
 
 ifeq ($(ARCH), mipsel)
-	cpu                 ?= 24Kc
+	qemu_cpu            = -cpu 24Kc
+	qemu_machine        = -M malta
+else ifeq ($(ARCH), riscv32)
+	triple              = riscv32imac-unknown-none-elf
 else
 	$(error Unknown Arch: $(ARCH))
 endif
 
+triple                  ?= $(ARCH)-unknown-none
+
 export ARCH
 
-target_path             = target/$(ARCH)-unknown-none
+target_path             = target/$(triple)
 
 ifneq ($(MOS_RELEASE),)
 	mos_elf             = $(target_path)/release/rusty_mos
@@ -21,15 +26,15 @@ user_disk               := $(disk_path)/fs.img
 empty_disk              := $(disk_path)/empty.img
 
 QEMU                    = qemu-system-$(ARCH)
-QEMU_FLAGS              += -cpu $(cpu) -m 64 -nographic -M malta \
+QEMU_FLAGS              += $(qemu_cpu) -m 64 -nographic $(qemu_machine) \
 						$(shell [ -f '$(user_disk)' ] && echo '-drive id=ide0,file=$(user_disk),if=ide,format=raw ')\
 						$(shell [ -f '$(empty_disk)' ] && echo '-drive id=ide1,file=$(empty_disk),if=ide,format=raw ')\
 						-no-reboot
 
 CARGO                   = cargo
-CARGO_TARGET            = --target $(ARCH)-unknown-none
+CARGO_TARGET            = --target $(triple)
 CARGO_ZBUILD            = -Zbuild-std=core,alloc
-CARGO_FEATURES          = --features mipsel,
+CARGO_FEATURES          = --features $(ARCH),
 CARGO_FLAG              = 
 
 ifneq ($(MOS_RELEASE),)
@@ -38,9 +43,9 @@ endif
 
 CARGO_BUILD = $(CARGO) build $(CARGO_TARGET) $(CARGO_FLAG) $(CARGO_FEATURES)
 
-.all: build
+.all: build, check
 
-.PHONY: build, clean, doc, test
+.PHONY: build, clean, doc, test, check
 
 test:
 	MOS_TEST=1 $(CARGO_BUILD)
@@ -53,6 +58,10 @@ dbg_test:
 build:
 	MOS_USER=1 $(MAKE) --directory=mos_user
 	MOS_BUILD=1 $(CARGO_BUILD)
+
+check:
+	$(CARGO) check $(CARGO_TARGET) $(CARGO_ZBUILD) $(CARGO_FEATURES)
+	$(CARGO) clippy $(CARGO_TARGET) $(CARGO_ZBUILD) $(CARGO_FEATURES) -- -D warnings
 
 run: build
 	$(QEMU) $(QEMU_FLAGS) -kernel $(mos_elf)

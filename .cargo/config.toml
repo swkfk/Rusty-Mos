@@ -1,5 +1,4 @@
 [build]
-target = "mipsel-unknown-none"
 rustflags = [
     "-C",
     "link-arg=-Tsrc/kernel.lds",

@@ -1,1 +1,2 @@
-pub mod cp0reg;
+pub mod asm;
+pub mod cp0_reg;

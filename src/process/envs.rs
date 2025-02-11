@@ -7,7 +7,7 @@ use core::{
 };
 
 use crate::{
-    arch::cp0reg::*,
+    arch::reg_prefabs::*,
     consts::error::KError,
     debugln,
     kernel::trap::TrapFrame,
